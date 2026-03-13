@@ -3,15 +3,23 @@ import { Product, FinancialResult } from '@/types'
 export function calculateFinancials(product: Product, exchangeRate: number): FinancialResult {
   const costInBrl = product.currency === 'USD' ? product.unitCost * exchangeRate : product.unitCost
 
+  const totalPurchaseCost = costInBrl * product.qty
   const unitSalePrice = costInBrl * product.salesFactor
   const totalSalePrice = unitSalePrice * product.qty
-  const totalPurchaseCost = costInBrl * product.qty
 
   const taxValues = {
-    icms: totalSalePrice * (product.taxRates.icms / 100),
-    ipi: totalSalePrice * (product.taxRates.ipi / 100),
-    pisCofins: totalSalePrice * (product.taxRates.pisCofins / 100),
-    iss: totalSalePrice * (product.taxRates.iss / 100),
+    icms:
+      totalSalePrice * (product.taxRates.icms / 100) -
+      totalPurchaseCost * (product.taxRates.icms / 100),
+    ipi:
+      totalSalePrice * (product.taxRates.ipi / 100) -
+      totalPurchaseCost * (product.taxRates.ipi / 100),
+    pisCofins:
+      totalSalePrice * (product.taxRates.pisCofins / 100) -
+      totalPurchaseCost * (product.taxRates.pisCofins / 100),
+    iss:
+      totalSalePrice * (product.taxRates.iss / 100) -
+      totalPurchaseCost * (product.taxRates.iss / 100),
   }
 
   const encargoValues = {

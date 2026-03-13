@@ -49,7 +49,7 @@ export function ProductEditForm({
     <div className="space-y-6 text-sm">
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {renderField(
-          'Part Number',
+          'Código do Produto (Part Number)',
           product.pn,
           (v) => handleUpdate({ pn: v }),
           'text',
@@ -65,7 +65,7 @@ export function ProductEditForm({
           'lg:col-span-3',
         )}
         <div className="space-y-1">
-          <Label>Tipo</Label>
+          <Label>Tipo (HW, SW, Serviço)</Label>
           <Select value={product.type} onValueChange={(v: any) => handleUpdate({ type: v })}>
             <SelectTrigger>
               <SelectValue />
@@ -78,7 +78,7 @@ export function ProductEditForm({
           </Select>
         </div>
         <div className="space-y-1">
-          <Label>Moeda</Label>
+          <Label>Moeda (USD ou R$)</Label>
           <Select
             value={product.currency}
             onValueChange={(v: any) => handleUpdate({ currency: v })}
@@ -97,10 +97,12 @@ export function ProductEditForm({
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {renderField('Quantidade', product.qty, (v) => handleUpdate({ qty: Number(v) }), 'number')}
         {renderField(
-          'Custo Unitário',
+          'Valor Unitário de compra (custo)',
           product.unitCost,
           (v) => handleUpdate({ unitCost: Number(v) }),
           'number',
+          undefined,
+          'lg:col-span-2',
         )}
         {renderField(
           'ICMS (%)',
@@ -117,7 +119,7 @@ export function ProductEditForm({
           formatCurrency(financials.taxValues.ipi),
         )}
         {renderField(
-          'PIS/COF (%)',
+          'PIS/COFINS (%)',
           product.taxRates.pisCofins,
           (v) => handleUpdate({ taxRates: { ...product.taxRates, pisCofins: Number(v) } }),
           'number',
@@ -130,15 +132,15 @@ export function ProductEditForm({
           'number',
           formatCurrency(financials.taxValues.iss),
         )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {renderField(
-          'Fator Venda',
+          'Fator de Venda',
           product.salesFactor,
           (v) => handleUpdate({ salesFactor: Number(v) }),
           'number',
         )}
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {renderField(
           'NF (%)',
           product.encargoRates.nf,
@@ -148,18 +150,19 @@ export function ProductEditForm({
           'lg:col-start-3',
         )}
         {renderField(
-          'Admin (%)',
+          'Custo Administrativo (%)',
           product.encargoRates.admin,
           (v) => handleUpdate({ encargoRates: { ...product.encargoRates, admin: Number(v) } }),
           'number',
           formatCurrency(financials.encargoValues.admin),
         )}
         {renderField(
-          'Comissão (%)',
+          'Comissão Vendedor (%)',
           product.encargoRates.comissao,
           (v) => handleUpdate({ encargoRates: { ...product.encargoRates, comissao: Number(v) } }),
           'number',
           formatCurrency(financials.encargoValues.comissao),
+          'lg:col-span-2',
         )}
       </div>
 
@@ -167,15 +170,15 @@ export function ProductEditForm({
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 bg-muted/30 p-4 rounded-lg">
         <div>
-          <Label className="text-muted-foreground text-xs">Valor Total Compra</Label>
+          <Label className="text-muted-foreground text-xs">Valor Total de Compra</Label>
           <div className="font-semibold">{formatCurrency(financials.totalPurchaseCost)}</div>
         </div>
         <div>
-          <Label className="text-muted-foreground text-xs">Valor Unitário Venda</Label>
+          <Label className="text-muted-foreground text-xs">Valor Unitário de Venda</Label>
           <div className="font-semibold">{formatCurrency(financials.unitSalePrice)}</div>
         </div>
         <div>
-          <Label className="text-muted-foreground text-xs">Valor Total Venda</Label>
+          <Label className="text-muted-foreground text-xs">Valor Total de Venda</Label>
           <div className="font-semibold text-primary">
             {formatCurrency(financials.totalSalePrice)}
           </div>

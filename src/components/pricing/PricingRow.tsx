@@ -80,7 +80,7 @@ export function PricingRow({ product }: { product: Product }) {
                 <span className="text-right">{formatPercent(product.taxRates.icms)}</span>
                 <span>IPI:</span>
                 <span className="text-right">{formatPercent(product.taxRates.ipi)}</span>
-                <span>PIS/COF:</span>
+                <span>PIS/COFINS:</span>
                 <span className="text-right">{formatPercent(product.taxRates.pisCofins)}</span>
                 <span>ISS:</span>
                 <span className="text-right">{formatPercent(product.taxRates.iss)}</span>
@@ -97,9 +97,9 @@ export function PricingRow({ product }: { product: Product }) {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <span>NF:</span>
                 <span className="text-right">{formatPercent(product.encargoRates.nf)}</span>
-                <span>Admin:</span>
+                <span>Custo Admin:</span>
                 <span className="text-right">{formatPercent(product.encargoRates.admin)}</span>
-                <span>Comissão:</span>
+                <span>Comissão Vendedor:</span>
                 <span className="text-right">{formatPercent(product.encargoRates.comissao)}</span>
               </div>
             </TooltipContent>

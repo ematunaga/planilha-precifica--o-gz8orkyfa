@@ -16,18 +16,28 @@ export default function Simulador() {
   // Simulation 1: Given Target Price, what is the Factor and Margin?
   const sim1 = useMemo(() => {
     const factor = baseCost > 0 ? targetPrice / baseCost : 0
-    const netValue = targetPrice * (1 - taxesPercent / 100 - encargosPercent / 100)
+    const t = taxesPercent / 100
+    const e = encargosPercent / 100
+
+    const taxValue = targetPrice * t - baseCost * t
+    const encargosValue = targetPrice * e
+    const netValue = targetPrice - taxValue - encargosValue
     const margin = netValue - baseCost
     const marginPercent = targetPrice > 0 ? (margin / targetPrice) * 100 : 0
+
     return { factor, margin, marginPercent }
   }, [baseCost, targetPrice, taxesPercent, encargosPercent])
 
   // Simulation 2: Given Target Price and Target Margin (%), what is the Max Purchase Cost?
   const sim2 = useMemo(() => {
-    // Purchase Cost = Sale Price * (1 - Tax% - Encargos% - Margin%)
-    const maxCost =
-      targetPrice * (1 - taxesPercent / 100 - encargosPercent / 100 - targetMarginPercent / 100)
+    const t = taxesPercent / 100
+    const e = encargosPercent / 100
+    const m = targetMarginPercent / 100
+
+    // Purchase Cost = Sale Price * (1 - Tax% - Encargos% - Margin%) / (1 - Tax%)
+    const maxCost = 1 - t !== 0 ? (targetPrice * (1 - t - e - m)) / (1 - t) : 0
     const factor = maxCost > 0 ? targetPrice / maxCost : 0
+
     return { maxCost, factor }
   }, [targetPrice, taxesPercent, encargosPercent, targetMarginPercent])
 
