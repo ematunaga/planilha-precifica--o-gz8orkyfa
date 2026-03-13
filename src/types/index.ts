@@ -46,3 +46,11 @@ export interface FinancialResult {
   taxValues: TaxRates
   encargoValues: EncargoRates
 }
+
+export interface ProjectVersion {
+  id: string
+  name: string
+  date: string
+  products: Product[]
+  exchangeRate: number
+}

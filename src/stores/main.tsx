@@ -1,13 +1,20 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { Product } from '@/types'
+import { Product, ProjectVersion } from '@/types'
 
 interface MainStoreState {
   products: Product[]
   exchangeRate: number
+  displayCurrency: 'BRL' | 'USD'
+  versions: ProjectVersion[]
   setExchangeRate: (rate: number) => void
+  setDisplayCurrency: (currency: 'BRL' | 'USD') => void
   updateProduct: (id: string, updates: Partial<Product>) => void
   addProduct: (product: Product) => void
   removeProduct: (id: string) => void
+  saveVersion: (name: string) => void
+  loadVersion: (id: string) => void
+  deleteVersion: (id: string) => void
+  setProducts: (products: Product[]) => void
 }
 
 const defaultProducts: Product[] = [
@@ -68,6 +75,15 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     return saved ? parseFloat(saved) : 5.15
   })
 
+  const [displayCurrency, setDisplayCurrency] = useState<'BRL' | 'USD'>(() => {
+    return (localStorage.getItem('pricing_display_currency') as 'BRL' | 'USD') || 'BRL'
+  })
+
+  const [versions, setVersions] = useState<ProjectVersion[]>(() => {
+    const saved = localStorage.getItem('pricing_versions')
+    return saved ? JSON.parse(saved) : []
+  })
+
   useEffect(() => {
     localStorage.setItem('pricing_products', JSON.stringify(products))
   }, [products])
@@ -75,6 +91,14 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem('pricing_exchange_rate', exchangeRate.toString())
   }, [exchangeRate])
+
+  useEffect(() => {
+    localStorage.setItem('pricing_display_currency', displayCurrency)
+  }, [displayCurrency])
+
+  useEffect(() => {
+    localStorage.setItem('pricing_versions', JSON.stringify(versions))
+  }, [versions])
 
   const updateProduct = (id: string, updates: Partial<Product>) => {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)))
@@ -88,16 +112,46 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     setProducts((prev) => prev.filter((p) => p.id !== id))
   }
 
+  const saveVersion = (name: string) => {
+    const newVersion: ProjectVersion = {
+      id: Date.now().toString(),
+      name,
+      date: new Date().toISOString(),
+      products: [...products],
+      exchangeRate,
+    }
+    setVersions((prev) => [newVersion, ...prev])
+  }
+
+  const loadVersion = (id: string) => {
+    const v = versions.find((v) => v.id === id)
+    if (v) {
+      setProducts(v.products)
+      setExchangeRate(v.exchangeRate)
+    }
+  }
+
+  const deleteVersion = (id: string) => {
+    setVersions((prev) => prev.filter((v) => v.id !== id))
+  }
+
   return React.createElement(
     MainStoreContext.Provider,
     {
       value: {
         products,
         exchangeRate,
+        displayCurrency,
+        versions,
         setExchangeRate,
+        setDisplayCurrency,
         updateProduct,
         addProduct,
         removeProduct,
+        saveVersion,
+        loadVersion,
+        deleteVersion,
+        setProducts,
       },
     },
     children,

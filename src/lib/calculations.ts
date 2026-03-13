@@ -69,8 +69,18 @@ export function calculateTotalMetrics(products: Product[], exchangeRate: number)
         totalPurchase: acc.totalPurchase + metrics.totalPurchaseCost,
         totalSale: acc.totalSale + metrics.totalSalePrice,
         totalProfit: acc.totalProfit + metrics.netMargin,
+        totalPurchaseUsd: acc.totalPurchaseUsd + metrics.totalPurchaseCost / exchangeRate,
+        totalSaleUsd: acc.totalSaleUsd + metrics.totalSalePriceUsd,
+        totalProfitUsd: acc.totalProfitUsd + metrics.netMargin / exchangeRate,
       }
     },
-    { totalPurchase: 0, totalSale: 0, totalProfit: 0 },
+    {
+      totalPurchase: 0,
+      totalSale: 0,
+      totalProfit: 0,
+      totalPurchaseUsd: 0,
+      totalSaleUsd: 0,
+      totalProfitUsd: 0,
+    },
   )
 }
