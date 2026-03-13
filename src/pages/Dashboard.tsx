@@ -16,13 +16,14 @@ import { useMainStore } from '@/stores/main'
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { folders, createFolder, startNewProject } = useMainStore()
+  const { folders, templates, createFolder, startNewProject } = useMainStore()
 
   const [isOpen, setIsOpen] = useState(false)
   const [folderId, setFolderId] = useState(folders[0]?.id || '')
   const [newFolderName, setNewFolderName] = useState('')
   const [projectName, setProjectName] = useState('')
   const [versionName, setVersionName] = useState('Versão Inicial')
+  const [templateId, setTemplateId] = useState('')
 
   const handleCreate = () => {
     let targetFolder = folderId
@@ -32,7 +33,12 @@ export default function Dashboard() {
     }
     if (!projectName.trim() || !targetFolder) return
 
-    startNewProject(targetFolder, projectName.trim(), versionName.trim() || 'Versão Inicial')
+    startNewProject(
+      targetFolder,
+      projectName.trim(),
+      versionName.trim() || 'Versão Inicial',
+      templateId || undefined,
+    )
     setIsOpen(false)
     navigate('/precificacao')
   }
@@ -111,6 +117,22 @@ export default function Dashboard() {
                 />
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label>Template (Opcional)</Label>
+              <select
+                value={templateId}
+                onChange={(e) => setTemplateId(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="">Sem Template (Padrão)</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="space-y-2">
               <Label>Nome do Projeto</Label>

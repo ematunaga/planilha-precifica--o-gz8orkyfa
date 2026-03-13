@@ -8,6 +8,7 @@ import {
   Trash2,
   ChevronRight,
   AlertCircle,
+  BookmarkPlus,
 } from 'lucide-react'
 import { SummaryCards } from '@/components/pricing/SummaryCards'
 import { PricingTable } from '@/components/pricing/PricingTable'
@@ -50,10 +51,13 @@ export default function Pricing() {
     createVersion,
     loadVersion,
     deleteVersion,
+    saveTemplate,
   } = useMainStore()
 
   const [isSaveOpen, setIsSaveOpen] = useState(false)
   const [newVersionName, setNewVersionName] = useState('')
+  const [isTemplateOpen, setIsTemplateOpen] = useState(false)
+  const [templateName, setTemplateName] = useState('')
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeFolder = folders.find((f) => f.id === activeProject?.folderId)
@@ -68,8 +72,7 @@ export default function Pricing() {
         <AlertCircle className="h-16 w-16 text-muted-foreground opacity-20" />
         <h2 className="text-xl font-semibold">Nenhum projeto ativo</h2>
         <p className="text-muted-foreground text-center max-w-sm">
-          Para acessar a planilha de precificação, você precisa criar um novo projeto ou abrir um
-          existente.
+          Para acessar a planilha, crie um novo projeto ou abra um existente.
         </p>
         <Button onClick={() => navigate('/')}>Ir para o Dashboard</Button>
       </div>
@@ -82,6 +85,22 @@ export default function Pricing() {
     setIsSaveOpen(false)
     setNewVersionName('')
     toast.success('Versão salva com sucesso!')
+  }
+
+  const handleSaveTemplate = () => {
+    if (!templateName.trim()) return
+    const sourceRates =
+      products.length > 0
+        ? { taxRates: products[0].taxRates, encargoRates: products[0].encargoRates }
+        : {
+            taxRates: { icms: 0, ipi: 0, pisCofins: 9.25, iss: 0 },
+            encargoRates: { nf: 2, admin: 5, comissao: 3 },
+          }
+
+    saveTemplate(templateName.trim(), sourceRates.taxRates, sourceRates.encargoRates)
+    setIsTemplateOpen(false)
+    setTemplateName('')
+    toast.success('Template salvo com sucesso!')
   }
 
   const handleExportExcel = () => {
@@ -101,7 +120,6 @@ export default function Pricing() {
       'Margem BRL',
       'Margem %',
     ]
-
     const rows = products.map((p) => {
       const f = calculateFinancials(p, exchangeRate)
       return [
@@ -121,12 +139,10 @@ export default function Pricing() {
         f.netMarginPercent.toFixed(2) + '%',
       ].join(',')
     })
-
     const csv = [headers.join(','), ...rows].join('\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.href = url
+    link.href = URL.createObjectURL(blob)
     link.download = `${activeProject.name}_${new Date().toISOString().split('T')[0]}.csv`
     link.click()
     toast.success('Arquivo Excel gerado com sucesso!')
@@ -163,9 +179,7 @@ export default function Pricing() {
           <ToggleGroup
             type="single"
             value={displayCurrency}
-            onValueChange={(val) => {
-              if (val) setDisplayCurrency(val as 'BRL' | 'USD')
-            }}
+            onValueChange={(val) => val && setDisplayCurrency(val as 'BRL' | 'USD')}
             className="bg-background border rounded-md h-9"
           >
             <ToggleGroupItem
@@ -183,6 +197,10 @@ export default function Pricing() {
               USD
             </ToggleGroupItem>
           </ToggleGroup>
+
+          <Button variant="outline" size="sm" onClick={() => setIsTemplateOpen(true)}>
+            <BookmarkPlus className="h-4 w-4 mr-2" /> Template
+          </Button>
 
           <Button size="sm" onClick={() => setIsSaveOpen(true)} className="shadow-sm">
             <Save className="h-4 w-4 mr-2" /> Salvar Versão
@@ -247,7 +265,6 @@ export default function Pricing() {
       </div>
 
       <SummaryCards />
-
       <div className="print-area">
         <PricingTable />
       </div>
@@ -274,6 +291,37 @@ export default function Pricing() {
               Cancelar
             </Button>
             <Button onClick={handleSave}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isTemplateOpen} onOpenChange={setIsTemplateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Salvar como Template</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Salva as taxas e encargos do primeiro item para reuso em novos projetos.
+            </p>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome do Template</Label>
+              <Input
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Ex: Margem Serviços Enterprise"
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveTemplate()}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTemplateOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>
+              Salvar Template
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

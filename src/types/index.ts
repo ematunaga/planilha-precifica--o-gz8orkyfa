@@ -56,6 +56,14 @@ export interface Project {
   id: string
   folderId: string
   name: string
+  templateId?: string
+}
+
+export interface PricingTemplate {
+  id: string
+  name: string
+  taxRates: TaxRates
+  encargoRates: EncargoRates
 }
 
 export interface ProjectVersion {

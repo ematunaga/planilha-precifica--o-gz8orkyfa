@@ -5,6 +5,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { MainStoreProvider, useMainStore } from '@/stores/main'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
+import Register from '@/pages/Register'
+import ForgotPassword from '@/pages/ForgotPassword'
 import Dashboard from '@/pages/Dashboard'
 import Projetos from '@/pages/Projetos'
 import Pricing from '@/pages/Pricing'
@@ -22,6 +24,8 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route
         element={
           <ProtectedRoute>

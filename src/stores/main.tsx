@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { Product, ProjectVersion, Folder, Project } from '@/types'
+import {
+  Product,
+  ProjectVersion,
+  Folder,
+  Project,
+  PricingTemplate,
+  TaxRates,
+  EncargoRates,
+} from '@/types'
 
 const defaultProducts: Product[] = [
   {
@@ -39,25 +47,30 @@ interface MainStoreState {
   folders: Folder[]
   projects: Project[]
   versions: ProjectVersion[]
+  templates: PricingTemplate[]
   activeProjectId: string | null
   activeVersionId: string | null
   products: Product[]
   exchangeRate: number
   displayCurrency: 'BRL' | 'USD'
+  lastExchangeUpdate: string | null
   setExchangeRate: (rate: number) => void
   setDisplayCurrency: (c: 'BRL' | 'USD') => void
+  fetchExchangeRate: () => Promise<void>
   updateProduct: (id: string, updates: Partial<Product>) => void
   addProduct: (product: Product) => void
   removeProduct: (id: string) => void
   setProducts: (products: Product[]) => void
   createFolder: (name: string) => string
-  createProject: (folderId: string, name: string) => string
+  createProject: (folderId: string, name: string, templateId?: string) => string
   createVersion: (projectId: string, name: string) => string
   loadVersion: (versionId: string) => void
   deleteVersion: (id: string) => void
   deleteProject: (id: string) => void
   deleteFolder: (id: string) => void
-  startNewProject: (folderId: string, pName: string, vName: string) => void
+  startNewProject: (folderId: string, pName: string, vName: string, templateId?: string) => void
+  saveTemplate: (name: string, taxRates: TaxRates, encargoRates: EncargoRates) => void
+  deleteTemplate: (id: string) => void
 }
 
 const MainStoreContext = createContext<MainStoreState | null>(null)
@@ -73,10 +86,16 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   const [versions, setVersions] = useState<ProjectVersion[]>(() =>
     JSON.parse(localStorage.getItem('p_ver') || '[]'),
   )
+  const [templates, setTemplates] = useState<PricingTemplate[]>(() =>
+    JSON.parse(localStorage.getItem('p_tpl') || '[]'),
+  )
   const [activeProjectId, setPID] = useState<string | null>(() => localStorage.getItem('p_pid'))
   const [activeVersionId, setVID] = useState<string | null>(() => localStorage.getItem('p_vid'))
   const [products, setProducts] = useState<Product[]>(defaultProducts)
   const [exchangeRate, setExchangeRate] = useState<number>(5.15)
+  const [lastExchangeUpdate, setLastExchangeUpdate] = useState<string | null>(() =>
+    localStorage.getItem('p_ex_date'),
+  )
   const [displayCurrency, setDisplayCurrency] = useState<'BRL' | 'USD'>('BRL')
 
   useEffect(() => {
@@ -92,18 +111,20 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('p_ver', JSON.stringify(versions))
   }, [versions])
   useEffect(() => {
-    if (activeProjectId) {
-      localStorage.setItem('p_pid', activeProjectId)
-    } else {
-      localStorage.removeItem('p_pid')
-    }
+    localStorage.setItem('p_tpl', JSON.stringify(templates))
+  }, [templates])
+  useEffect(() => {
+    if (lastExchangeUpdate) localStorage.setItem('p_ex_date', lastExchangeUpdate)
+  }, [lastExchangeUpdate])
+  useEffect(() => {
+    activeProjectId
+      ? localStorage.setItem('p_pid', activeProjectId)
+      : localStorage.removeItem('p_pid')
   }, [activeProjectId])
   useEffect(() => {
-    if (activeVersionId) {
-      localStorage.setItem('p_vid', activeVersionId)
-    } else {
-      localStorage.removeItem('p_vid')
-    }
+    activeVersionId
+      ? localStorage.setItem('p_vid', activeVersionId)
+      : localStorage.removeItem('p_vid')
   }, [activeVersionId])
 
   const loginUser = () => setIsAuth(true)
@@ -113,14 +134,27 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     setVID(null)
   }
 
+  const fetchExchangeRate = async () => {
+    try {
+      const res = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL')
+      const data = await res.json()
+      if (data?.USDBRL?.ask) {
+        setExchangeRate(parseFloat(data.USDBRL.ask))
+        setLastExchangeUpdate(new Date().toISOString())
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   const createFolder = (name: string) => {
     const id = Date.now().toString()
     setFolders((p) => [...p, { id, name }])
     return id
   }
-  const createProject = (folderId: string, name: string) => {
+  const createProject = (folderId: string, name: string, templateId?: string) => {
     const id = Date.now().toString()
-    setProjects((p) => [...p, { id, folderId, name }])
+    setProjects((p) => [...p, { id, folderId, name, templateId }])
     return id
   }
   const createVersion = (projectId: string, name: string) => {
@@ -150,10 +184,20 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const startNewProject = (folderId: string, pName: string, vName: string) => {
-    const pid = createProject(folderId, pName)
+  const startNewProject = (folderId: string, pName: string, vName: string, templateId?: string) => {
+    const pid = createProject(folderId, pName, templateId)
     setPID(pid)
-    setProducts(defaultProducts)
+    let initialProducts = [...defaultProducts]
+    if (templateId) {
+      const tpl = templates.find((t) => t.id === templateId)
+      if (tpl)
+        initialProducts = initialProducts.map((p) => ({
+          ...p,
+          taxRates: { ...tpl.taxRates },
+          encargoRates: { ...tpl.encargoRates },
+        }))
+    }
+    setProducts(initialProducts)
     const vid = Date.now().toString()
     setVersions((p) => [
       ...p,
@@ -162,7 +206,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
         projectId: pid,
         name: vName,
         date: new Date().toISOString(),
-        products: [...defaultProducts],
+        products: [...initialProducts],
         exchangeRate,
       },
     ])
@@ -179,7 +223,6 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
       setVID(null)
     }
   }
-
   const deleteProject = (id: string) => {
     setProjects((p) => p.filter((p) => p.id !== id))
     setVersions((p) => p.filter((v) => v.projectId !== id))
@@ -188,11 +231,15 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
       setVID(null)
     }
   }
-
   const deleteVersion = (id: string) => {
     setVersions((p) => p.filter((v) => v.id !== id))
     if (activeVersionId === id) setVID(null)
   }
+
+  const saveTemplate = (name: string, taxRates: TaxRates, encargoRates: EncargoRates) => {
+    setTemplates((p) => [...p, { id: Date.now().toString(), name, taxRates, encargoRates }])
+  }
+  const deleteTemplate = (id: string) => setTemplates((p) => p.filter((t) => t.id !== id))
 
   const updateProduct = (id: string, upd: Partial<Product>) =>
     setProducts((p) => p.map((x) => (x.id === id ? { ...x, ...upd } : x)))
@@ -206,13 +253,16 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     folders,
     projects,
     versions,
+    templates,
     activeProjectId,
     activeVersionId,
     products,
     exchangeRate,
     displayCurrency,
+    lastExchangeUpdate,
     setExchangeRate,
     setDisplayCurrency,
+    fetchExchangeRate,
     updateProduct,
     addProduct,
     removeProduct,
@@ -225,8 +275,9 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     deleteProject,
     deleteFolder,
     startNewProject,
+    saveTemplate,
+    deleteTemplate,
   }
-
   return React.createElement(MainStoreContext.Provider, { value: store }, children)
 }
 

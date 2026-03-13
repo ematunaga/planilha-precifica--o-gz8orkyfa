@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   Card,
   CardContent,
@@ -58,7 +58,15 @@ export default function Login() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Senha</Label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  Esqueceu a senha?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -70,10 +78,16 @@ export default function Login() {
               />
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex-col gap-4">
             <Button type="submit" className="w-full h-11 text-base font-semibold shadow-sm">
               Entrar no Sistema
             </Button>
+            <div className="text-center text-sm">
+              Não tem uma conta?{' '}
+              <Link to="/register" className="font-semibold text-primary hover:underline">
+                Criar Conta
+              </Link>
+            </div>
           </CardFooter>
         </form>
       </Card>

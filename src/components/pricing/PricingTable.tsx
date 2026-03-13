@@ -9,15 +9,25 @@ import {
 import { Card } from '@/components/ui/card'
 import { PricingRow } from './PricingRow'
 import { useMainStore } from '@/stores/main'
-import { Search, Plus } from 'lucide-react'
+import { Search, Plus, RefreshCw } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { Product } from '@/types'
+import { toast } from 'sonner'
 
 export function PricingTable() {
-  const { products, addProduct, exchangeRate, setExchangeRate } = useMainStore()
+  const {
+    products,
+    addProduct,
+    exchangeRate,
+    setExchangeRate,
+    fetchExchangeRate,
+    projects,
+    activeProjectId,
+    templates,
+  } = useMainStore()
   const [search, setSearch] = useState('')
 
   const filteredProducts = products.filter(
@@ -26,7 +36,17 @@ export function PricingTable() {
       p.description.toLowerCase().includes(search.toLowerCase()),
   )
 
+  const handleUpdateExchange = async () => {
+    await fetchExchangeRate()
+    toast.success('Cotação atualizada via API!')
+  }
+
   const handleAddProduct = () => {
+    const activeProject = projects.find((p) => p.id === activeProjectId)
+    const template = activeProject?.templateId
+      ? templates.find((t) => t.id === activeProject.templateId)
+      : null
+
     const newProduct: Product = {
       id: Date.now().toString(),
       pn: 'NOVO-ITEM',
@@ -37,8 +57,8 @@ export function PricingTable() {
       unitCost: 100,
       st: 0,
       salesModel: 'Direct',
-      taxRates: { icms: 0, ipi: 0, pisCofins: 9.25, iss: 0 },
-      encargoRates: { nf: 2, admin: 5, comissao: 3 },
+      taxRates: template ? { ...template.taxRates } : { icms: 0, ipi: 0, pisCofins: 9.25, iss: 0 },
+      encargoRates: template ? { ...template.encargoRates } : { nf: 2, admin: 5, comissao: 3 },
       salesFactor: 1.5,
     }
     addProduct(newProduct)
@@ -51,14 +71,25 @@ export function PricingTable() {
         <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
           <div className="flex items-center gap-2">
             <Label className="whitespace-nowrap text-xs text-muted-foreground">Cot. USD:</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={exchangeRate}
-              onChange={(e) => setExchangeRate(Number(e.target.value))}
-              className="h-9 w-20 text-right bg-background"
-              title="Cotação USD"
-            />
+            <div className="relative flex items-center">
+              <Input
+                type="number"
+                step="0.01"
+                value={exchangeRate}
+                onChange={(e) => setExchangeRate(Number(e.target.value))}
+                className="h-9 w-24 text-right bg-background pr-8"
+                title="Cotação USD"
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 h-9 w-8 text-muted-foreground hover:text-primary"
+                onClick={handleUpdateExchange}
+                title="Atualizar via API"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -71,8 +102,7 @@ export function PricingTable() {
             />
           </div>
           <Button onClick={handleAddProduct} size="sm" className="h-9 shrink-0">
-            <Plus className="h-4 w-4 mr-1" />
-            Adicionar
+            <Plus className="h-4 w-4 mr-1" /> Adicionar
           </Button>
         </div>
       </div>
