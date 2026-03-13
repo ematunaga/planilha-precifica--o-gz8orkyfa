@@ -1,10 +1,19 @@
-/* Home Page - Replace this page layout, components, content, behavior with what you want and translate to the language of the user */
+import { SummaryCards } from '@/components/pricing/SummaryCards'
+import { PricingTable } from '@/components/pricing/PricingTable'
+
 const Index = () => {
   return (
-    <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">
-        This is a example page ready to be rewritten with your own content
-      </h1>
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+        <p className="text-muted-foreground">
+          Visão geral da precificação, margens e simulações do projeto atual.
+        </p>
+      </div>
+
+      <SummaryCards />
+
+      <PricingTable />
     </div>
   )
 }
