@@ -47,9 +47,9 @@ export function ProductEditForm({
 
   return (
     <div className="space-y-6 text-sm">
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         {renderField(
-          'Código do Produto (Part Number)',
+          'Part Number',
           product.pn,
           (v) => handleUpdate({ pn: v }),
           'text',
@@ -65,7 +65,7 @@ export function ProductEditForm({
           'lg:col-span-3',
         )}
         <div className="space-y-1">
-          <Label>Tipo (HW, SW, Serviço)</Label>
+          <Label>Tipo</Label>
           <Select value={product.type} onValueChange={(v: any) => handleUpdate({ type: v })}>
             <SelectTrigger>
               <SelectValue />
@@ -78,7 +78,7 @@ export function ProductEditForm({
           </Select>
         </div>
         <div className="space-y-1">
-          <Label>Moeda (USD ou R$)</Label>
+          <Label>Moeda</Label>
           <Select
             value={product.currency}
             onValueChange={(v: any) => handleUpdate({ currency: v })}
@@ -92,17 +92,39 @@ export function ProductEditForm({
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-1">
+          <Label>Modelo Venda</Label>
+          <Select
+            value={product.salesModel}
+            onValueChange={(v: any) => handleUpdate({ salesModel: v })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Direct">Direta</SelectItem>
+              <SelectItem value="Channel">Canal</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         {renderField('Quantidade', product.qty, (v) => handleUpdate({ qty: Number(v) }), 'number')}
         {renderField(
-          'Valor Unitário de compra (custo)',
+          'Custo Unitário',
           product.unitCost,
           (v) => handleUpdate({ unitCost: Number(v) }),
           'number',
           undefined,
           'lg:col-span-2',
+        )}
+        {renderField(
+          'ST (Valor Unit.)',
+          product.st,
+          (v) => handleUpdate({ st: Number(v) }),
+          'number',
+          formatCurrency(financials.totalStValue),
         )}
         {renderField(
           'ICMS (%)',
@@ -134,12 +156,14 @@ export function ProductEditForm({
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         {renderField(
           'Fator de Venda',
           product.salesFactor,
           (v) => handleUpdate({ salesFactor: Number(v) }),
           'number',
+          undefined,
+          'lg:col-span-2',
         )}
         {renderField(
           'NF (%)',
@@ -147,14 +171,15 @@ export function ProductEditForm({
           (v) => handleUpdate({ encargoRates: { ...product.encargoRates, nf: Number(v) } }),
           'number',
           formatCurrency(financials.encargoValues.nf),
-          'lg:col-start-3',
+          'lg:col-span-2',
         )}
         {renderField(
-          'Custo Administrativo (%)',
+          'Custo Admin (%)',
           product.encargoRates.admin,
           (v) => handleUpdate({ encargoRates: { ...product.encargoRates, admin: Number(v) } }),
           'number',
           formatCurrency(financials.encargoValues.admin),
+          'lg:col-span-2',
         )}
         {renderField(
           'Comissão Vendedor (%)',
@@ -175,20 +200,42 @@ export function ProductEditForm({
         </div>
         <div>
           <Label className="text-muted-foreground text-xs">Valor Unitário de Venda</Label>
-          <div className="font-semibold">{formatCurrency(financials.unitSalePrice)}</div>
+          {product.currency === 'USD' ? (
+            <div className="flex flex-col">
+              <span className="font-bold text-base">
+                {formatCurrency(financials.unitSalePriceUsd, 'USD')}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {formatCurrency(financials.unitSalePrice, 'BRL')}
+              </span>
+            </div>
+          ) : (
+            <div className="font-semibold">{formatCurrency(financials.unitSalePrice)}</div>
+          )}
         </div>
         <div>
           <Label className="text-muted-foreground text-xs">Valor Total de Venda</Label>
-          <div className="font-semibold text-primary">
-            {formatCurrency(financials.totalSalePrice)}
-          </div>
+          {product.currency === 'USD' ? (
+            <div className="flex flex-col">
+              <span className="font-bold text-base text-primary">
+                {formatCurrency(financials.totalSalePriceUsd, 'USD')}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {formatCurrency(financials.totalSalePrice, 'BRL')}
+              </span>
+            </div>
+          ) : (
+            <div className="font-semibold text-primary">
+              {formatCurrency(financials.totalSalePrice)}
+            </div>
+          )}
         </div>
         <div>
-          <Label className="text-muted-foreground text-xs">Valor Líquido</Label>
-          <div className="font-semibold">{formatCurrency(financials.netValue)}</div>
+          <Label className="text-muted-foreground text-xs">Base de Cálculo Líquida</Label>
+          <div className="font-semibold">{formatCurrency(financials.preliminaryNet)}</div>
         </div>
         <div>
-          <Label className="text-muted-foreground text-xs">Margem Líquida</Label>
+          <Label className="text-muted-foreground text-xs">Margem Líquida Final</Label>
           <div className="font-semibold text-emerald-600 dark:text-emerald-400">
             {formatCurrency(financials.netMargin)} ({financials.netMarginPercent.toFixed(1)}%)
           </div>

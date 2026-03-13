@@ -115,9 +115,20 @@ export function PricingRow({ product }: { product: Product }) {
               onChange={(e) => handleFactorChange(e.target.value)}
               className="h-7 w-20 text-right font-mono text-sm"
             />
-            <div className="text-xs font-medium text-primary">
-              {formatCurrency(financials.unitSalePrice)}
-            </div>
+            {product.currency === 'USD' ? (
+              <div className="flex flex-col items-end leading-none">
+                <span className="text-sm font-bold text-primary">
+                  {formatCurrency(financials.unitSalePriceUsd, 'USD')}
+                </span>
+                <span className="text-[10px] text-muted-foreground mt-1">
+                  {formatCurrency(financials.unitSalePrice, 'BRL')}
+                </span>
+              </div>
+            ) : (
+              <div className="text-xs font-medium text-primary">
+                {formatCurrency(financials.unitSalePrice, 'BRL')}
+              </div>
+            )}
           </div>
         </TableCell>
         <TableCell className="text-right">

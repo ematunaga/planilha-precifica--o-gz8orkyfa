@@ -2,10 +2,15 @@ import { Product, FinancialResult } from '@/types'
 
 export function calculateFinancials(product: Product, exchangeRate: number): FinancialResult {
   const costInBrl = product.currency === 'USD' ? product.unitCost * exchangeRate : product.unitCost
+  const stInBrl = product.currency === 'USD' ? product.st * exchangeRate : product.st
 
   const totalPurchaseCost = costInBrl * product.qty
   const unitSalePrice = costInBrl * product.salesFactor
   const totalSalePrice = unitSalePrice * product.qty
+  const totalStValue = stInBrl * product.qty
+
+  const unitSalePriceUsd = unitSalePrice / exchangeRate
+  const totalSalePriceUsd = totalSalePrice / exchangeRate
 
   const taxValues = {
     icms:
@@ -22,24 +27,31 @@ export function calculateFinancials(product: Product, exchangeRate: number): Fin
       totalPurchaseCost * (product.taxRates.iss / 100),
   }
 
+  const totalTaxesValue = taxValues.icms + taxValues.ipi + taxValues.pisCofins + taxValues.iss
+
+  const preliminaryNet = totalSalePrice - totalPurchaseCost - totalTaxesValue - totalStValue
+
   const encargoValues = {
-    nf: totalSalePrice * (product.encargoRates.nf / 100),
-    admin: totalSalePrice * (product.encargoRates.admin / 100),
-    comissao: totalSalePrice * (product.encargoRates.comissao / 100),
+    nf: preliminaryNet * (product.encargoRates.nf / 100),
+    admin: preliminaryNet * (product.encargoRates.admin / 100),
+    comissao: preliminaryNet * (product.encargoRates.comissao / 100),
   }
 
-  const totalTaxesValue = taxValues.icms + taxValues.ipi + taxValues.pisCofins + taxValues.iss
   const totalEncargosValue = encargoValues.nf + encargoValues.admin + encargoValues.comissao
 
-  const netValue = totalSalePrice - totalTaxesValue - totalEncargosValue
-  const netMargin = netValue - totalPurchaseCost
+  const netMargin = preliminaryNet - totalEncargosValue
+  const netValue = totalPurchaseCost + netMargin
   const netMarginPercent = totalSalePrice > 0 ? (netMargin / totalSalePrice) * 100 : 0
 
   return {
     unitSalePrice,
     totalSalePrice,
+    unitSalePriceUsd,
+    totalSalePriceUsd,
     totalPurchaseCost,
     totalTaxesValue,
+    totalStValue,
+    preliminaryNet,
     totalEncargosValue,
     netValue,
     netMargin,

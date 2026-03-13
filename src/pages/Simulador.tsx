@@ -19,10 +19,9 @@ export default function Simulador() {
     const t = taxesPercent / 100
     const e = encargosPercent / 100
 
-    const taxValue = targetPrice * t - baseCost * t
-    const encargosValue = targetPrice * e
-    const netValue = targetPrice - taxValue - encargosValue
-    const margin = netValue - baseCost
+    const preliminaryNet = (targetPrice - baseCost) * (1 - t)
+    const encargosValue = preliminaryNet * e
+    const margin = preliminaryNet - encargosValue
     const marginPercent = targetPrice > 0 ? (margin / targetPrice) * 100 : 0
 
     return { factor, margin, marginPercent }
@@ -34,8 +33,8 @@ export default function Simulador() {
     const e = encargosPercent / 100
     const m = targetMarginPercent / 100
 
-    // Purchase Cost = Sale Price * (1 - Tax% - Encargos% - Margin%) / (1 - Tax%)
-    const maxCost = 1 - t !== 0 ? (targetPrice * (1 - t - e - m)) / (1 - t) : 0
+    const K = (1 - t) * (1 - e)
+    const maxCost = K !== 0 ? targetPrice - (targetPrice * m) / K : 0
     const factor = maxCost > 0 ? targetPrice / maxCost : 0
 
     return { maxCost, factor }

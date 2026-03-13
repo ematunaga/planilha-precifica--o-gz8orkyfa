@@ -11,12 +11,13 @@ import { PricingRow } from './PricingRow'
 import { useMainStore } from '@/stores/main'
 import { Search, Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { Product } from '@/types'
 
 export function PricingTable() {
-  const { products, addProduct } = useMainStore()
+  const { products, addProduct, exchangeRate, setExchangeRate } = useMainStore()
   const [search, setSearch] = useState('')
 
   const filteredProducts = products.filter(
@@ -34,6 +35,8 @@ export function PricingTable() {
       currency: 'BRL',
       qty: 1,
       unitCost: 100,
+      st: 0,
+      salesModel: 'Direct',
       taxRates: { icms: 0, ipi: 0, pisCofins: 9.25, iss: 0 },
       encargoRates: { nf: 2, admin: 5, comissao: 3 },
       salesFactor: 1.5,
@@ -45,7 +48,18 @@ export function PricingTable() {
     <Card className="overflow-hidden border shadow-sm flex flex-col">
       <div className="p-4 border-b bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-4">
         <h2 className="text-lg font-semibold tracking-tight">Planilha de Custos</h2>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
+          <div className="flex items-center gap-2">
+            <Label className="whitespace-nowrap text-xs text-muted-foreground">Cot. USD:</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={exchangeRate}
+              onChange={(e) => setExchangeRate(Number(e.target.value))}
+              className="h-9 w-20 text-right bg-background"
+              title="Cotação USD"
+            />
+          </div>
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
