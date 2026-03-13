@@ -116,15 +116,21 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (lastExchangeUpdate) localStorage.setItem('p_ex_date', lastExchangeUpdate)
   }, [lastExchangeUpdate])
+
   useEffect(() => {
-    activeProjectId
-      ? localStorage.setItem('p_pid', activeProjectId)
-      : localStorage.removeItem('p_pid')
+    if (activeProjectId) {
+      localStorage.setItem('p_pid', activeProjectId)
+    } else {
+      localStorage.removeItem('p_pid')
+    }
   }, [activeProjectId])
+
   useEffect(() => {
-    activeVersionId
-      ? localStorage.setItem('p_vid', activeVersionId)
-      : localStorage.removeItem('p_vid')
+    if (activeVersionId) {
+      localStorage.setItem('p_vid', activeVersionId)
+    } else {
+      localStorage.removeItem('p_vid')
+    }
   }, [activeVersionId])
 
   const loginUser = () => setIsAuth(true)
