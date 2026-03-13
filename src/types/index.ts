@@ -2,6 +2,18 @@ export type ProductType = 'HW' | 'SW' | 'Serviço'
 export type Currency = 'BRL' | 'USD'
 export type SalesModel = 'Direct' | 'Channel'
 
+export type UserRole = 'Admin' | 'Editor' | 'Viewer'
+export type UserStatus = 'Pending' | 'Authorized' | 'Revoked'
+
+export interface User {
+  id: string
+  name: string
+  email: string
+  password: string
+  role: UserRole
+  status: UserStatus
+}
+
 export interface TaxRates {
   icms: number
   ipi: number
@@ -50,6 +62,7 @@ export interface FinancialResult {
 export interface Folder {
   id: string
   name: string
+  createdBy?: string
 }
 
 export interface Project {
@@ -57,6 +70,7 @@ export interface Project {
   folderId: string
   name: string
   templateId?: string
+  createdBy?: string
 }
 
 export interface PricingTemplate {
@@ -73,4 +87,5 @@ export interface ProjectVersion {
   date: string
   products: Product[]
   exchangeRate: number
+  createdBy?: string
 }

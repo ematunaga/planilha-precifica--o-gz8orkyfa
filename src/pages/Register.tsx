@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Package2 } from 'lucide-react'
 import { toast } from 'sonner'
+import useAuthStore from '@/stores/auth'
 
 export default function Register() {
   const [name, setName] = useState('')
@@ -20,6 +21,7 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const navigate = useNavigate()
+  const { registerUser } = useAuthStore()
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,8 +36,13 @@ export default function Register() {
       return
     }
 
-    toast.success('Conta criada com sucesso! Faça login para continuar.')
-    navigate('/login')
+    const res = registerUser(name, email, password)
+    if (res.success) {
+      toast.success('Conta criada! Aguarde a autorização de um administrador.')
+      navigate('/login')
+    } else {
+      toast.error(res.message || 'Erro ao criar conta.')
+    }
   }
 
   return (

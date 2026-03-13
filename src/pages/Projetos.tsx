@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Folder, FolderPlus, FileText, ChevronRight, Trash2 } from 'lucide-react'
 import { useMainStore } from '@/stores/main'
+import useAuthStore from '@/stores/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { Folder as FolderType, Project, ProjectVersion } from '@/types'
 
 export default function Projetos() {
   const {
@@ -27,6 +29,7 @@ export default function Projetos() {
     deleteVersion,
     loadVersion,
   } = useMainStore()
+  const { currentUser } = useAuthStore()
   const navigate = useNavigate()
 
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(folders[0]?.id || null)
@@ -34,6 +37,26 @@ export default function Projetos() {
   const [newFolderName, setNewFolderName] = useState('')
 
   const activeFolderProjects = projects.filter((p) => p.folderId === selectedFolderId)
+
+  const canDeleteFolder = (f: FolderType) => {
+    if (currentUser?.role === 'Admin') return true
+    if (currentUser?.role === 'Editor') return f.createdBy === currentUser?.id
+    return false
+  }
+
+  const canDeleteProject = (p: Project) => {
+    if (currentUser?.role === 'Admin') return true
+    if (currentUser?.role === 'Editor') return p.createdBy === currentUser?.id
+    return false
+  }
+
+  const canDeleteVersion = (v: ProjectVersion) => {
+    if (currentUser?.role === 'Admin') return true
+    if (currentUser?.role === 'Editor') return v.createdBy === currentUser?.id
+    return false
+  }
+
+  const isViewer = currentUser?.role === 'Viewer'
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
@@ -67,15 +90,17 @@ export default function Projetos() {
             <h3 className="font-semibold flex items-center gap-2">
               <Folder className="h-4 w-4" /> Pastas
             </h3>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setIsFolderDialogOpen(true)}
-              title="Nova Pasta"
-            >
-              <FolderPlus className="h-4 w-4" />
-            </Button>
+            {!isViewer && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setIsFolderDialogOpen(true)}
+                title="Nova Pasta"
+              >
+                <FolderPlus className="h-4 w-4" />
+              </Button>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {folders.length === 0 ? (
@@ -95,23 +120,25 @@ export default function Projetos() {
                   onClick={() => setSelectedFolderId(folder.id)}
                 >
                   <span className="truncate">{folder.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      'h-6 w-6 opacity-0 group-hover:opacity-100',
-                      selectedFolderId === folder.id
-                        ? 'text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground'
-                        : 'text-muted-foreground hover:text-destructive',
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      deleteFolder(folder.id)
-                      toast.success('Pasta excluída')
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {canDeleteFolder(folder) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-6 w-6 opacity-0 group-hover:opacity-100',
+                        selectedFolderId === folder.id
+                          ? 'text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground'
+                          : 'text-muted-foreground hover:text-destructive',
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteFolder(folder.id)
+                        toast.success('Pasta excluída')
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               ))
             )}
@@ -128,9 +155,11 @@ export default function Projetos() {
             <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed rounded-lg bg-card gap-2">
               <FileText className="h-10 w-10 text-muted-foreground opacity-30" />
               <p className="text-muted-foreground font-medium">Nenhum projeto nesta pasta.</p>
-              <Button variant="outline" onClick={() => navigate('/')}>
-                Criar Novo Projeto
-              </Button>
+              {!isViewer && (
+                <Button variant="outline" onClick={() => navigate('/')}>
+                  Criar Novo Projeto
+                </Button>
+              )}
             </div>
           ) : (
             <div className="grid xl:grid-cols-2 gap-4">
@@ -147,17 +176,19 @@ export default function Projetos() {
                           {projectVersions.length} versão(ões) salva(s)
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => {
-                          deleteProject(project.id)
-                          toast.success('Projeto excluído')
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {canDeleteProject(project) && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => {
+                            deleteProject(project.id)
+                            toast.success('Projeto excluído')
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </CardHeader>
                     <CardContent className="p-0 flex-1 flex flex-col">
                       {projectVersions.length === 0 ? (
@@ -185,14 +216,16 @@ export default function Projetos() {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                  onClick={() => deleteVersion(v.id)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
+                                {canDeleteVersion(v) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                    onClick={() => deleteVersion(v.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
                                   variant="secondary"

@@ -1,5 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Calculator, Settings, Package2, FolderOpen, Table2 } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Calculator,
+  Settings,
+  Package2,
+  FolderOpen,
+  Table2,
+  Users,
+} from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -12,10 +20,12 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { useMainStore } from '@/stores/main'
+import useAuthStore from '@/stores/auth'
 
 export function AppSidebar() {
   const location = useLocation()
   const { activeProjectId } = useMainStore()
+  const { currentUser } = useAuthStore()
 
   const navItems = [
     { title: 'Dashboard', url: '/', icon: LayoutDashboard },
@@ -24,7 +34,12 @@ export function AppSidebar() {
       ? [{ title: 'Precificação Atual', url: '/precificacao', icon: Table2 }]
       : []),
     { title: 'Simulador', url: '/simulador', icon: Calculator },
-    { title: 'Configurações', url: '/configuracoes', icon: Settings },
+    ...(currentUser?.role === 'Admin'
+      ? [{ title: 'Configurações', url: '/configuracoes', icon: Settings }]
+      : []),
+    ...(currentUser?.role === 'Admin'
+      ? [{ title: 'Gestão de Usuário', url: '/usuarios', icon: Users }]
+      : []),
   ]
 
   return (

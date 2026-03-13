@@ -8,6 +8,7 @@ import {
   TaxRates,
   EncargoRates,
 } from '@/types'
+import useAuthStore from '@/stores/auth'
 
 const defaultProducts: Product[] = [
   {
@@ -41,9 +42,6 @@ const defaultProducts: Product[] = [
 ]
 
 interface MainStoreState {
-  isAuthenticated: boolean
-  loginUser: () => void
-  logoutUser: () => void
   folders: Folder[]
   projects: Project[]
   versions: ProjectVersion[]
@@ -76,7 +74,8 @@ interface MainStoreState {
 const MainStoreContext = createContext<MainStoreState | null>(null)
 
 export function MainStoreProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuth] = useState(() => localStorage.getItem('p_auth') === 'true')
+  const { currentUser } = useAuthStore()
+
   const [folders, setFolders] = useState<Folder[]>(() =>
     JSON.parse(localStorage.getItem('p_fld') || '[{"id":"1","name":"Meus Projetos"}]'),
   )
@@ -98,9 +97,6 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   )
   const [displayCurrency, setDisplayCurrency] = useState<'BRL' | 'USD'>('BRL')
 
-  useEffect(() => {
-    localStorage.setItem('p_auth', String(isAuthenticated))
-  }, [isAuthenticated])
   useEffect(() => {
     localStorage.setItem('p_fld', JSON.stringify(folders))
   }, [folders])
@@ -133,13 +129,6 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     }
   }, [activeVersionId])
 
-  const loginUser = () => setIsAuth(true)
-  const logoutUser = () => {
-    setIsAuth(false)
-    setPID(null)
-    setVID(null)
-  }
-
   const fetchExchangeRate = async () => {
     try {
       const res = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL')
@@ -155,12 +144,12 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
 
   const createFolder = (name: string) => {
     const id = Date.now().toString()
-    setFolders((p) => [...p, { id, name }])
+    setFolders((p) => [...p, { id, name, createdBy: currentUser?.id }])
     return id
   }
   const createProject = (folderId: string, name: string, templateId?: string) => {
     const id = Date.now().toString()
-    setProjects((p) => [...p, { id, folderId, name, templateId }])
+    setProjects((p) => [...p, { id, folderId, name, templateId, createdBy: currentUser?.id }])
     return id
   }
   const createVersion = (projectId: string, name: string) => {
@@ -174,6 +163,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
         date: new Date().toISOString(),
         products: [...products],
         exchangeRate,
+        createdBy: currentUser?.id,
       },
     ])
     setVID(id)
@@ -204,19 +194,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
         }))
     }
     setProducts(initialProducts)
-    const vid = Date.now().toString()
-    setVersions((p) => [
-      ...p,
-      {
-        id: vid,
-        projectId: pid,
-        name: vName,
-        date: new Date().toISOString(),
-        products: [...initialProducts],
-        exchangeRate,
-      },
-    ])
-    setVID(vid)
+    createVersion(pid, vName)
   }
 
   const deleteFolder = (id: string) => {
@@ -253,9 +231,6 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   const removeProduct = (id: string) => setProducts((p) => p.filter((x) => x.id !== id))
 
   const store = {
-    isAuthenticated,
-    loginUser,
-    logoutUser,
     folders,
     projects,
     versions,

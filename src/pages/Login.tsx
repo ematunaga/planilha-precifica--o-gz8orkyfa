@@ -11,20 +11,25 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import { useMainStore } from '@/stores/main'
+import useAuthStore from '@/stores/auth'
 import { Package2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function Login() {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const { loginUser } = useMainStore()
+  const { loginUser } = useAuthStore()
   const navigate = useNavigate()
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
-    if (username && password) {
-      loginUser()
-      navigate('/')
+    if (email && password) {
+      const res = loginUser(email, password)
+      if (res.success) {
+        navigate('/')
+      } else {
+        toast.error(res.message)
+      }
     }
   }
 
@@ -46,13 +51,13 @@ export default function Login() {
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Usuário</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="admin"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="h-11"
               />

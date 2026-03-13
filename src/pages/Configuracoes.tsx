@@ -3,11 +3,14 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useMainStore } from '@/stores/main'
+import useAuthStore from '@/stores/auth'
 import { RefreshCw, Trash2, Bookmark } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatPercent } from '@/lib/formatters'
+import { Navigate } from 'react-router-dom'
 
 export default function Configuracoes() {
+  const { currentUser } = useAuthStore()
   const {
     exchangeRate,
     setExchangeRate,
@@ -16,6 +19,10 @@ export default function Configuracoes() {
     templates,
     deleteTemplate,
   } = useMainStore()
+
+  if (currentUser?.role !== 'Admin') {
+    return <Navigate to="/" replace />
+  }
 
   const handleUpdateExchange = async () => {
     await fetchExchangeRate()

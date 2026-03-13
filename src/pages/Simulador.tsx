@@ -8,12 +8,16 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { formatCurrency, formatPercent } from '@/lib/formatters'
 import { useMainStore } from '@/stores/main'
+import useAuthStore from '@/stores/auth'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 
 export default function Simulador() {
   const { products, exchangeRate, updateProduct, activeProjectId } = useMainStore()
+  const { currentUser } = useAuthStore()
   const navigate = useNavigate()
+
+  const isViewer = currentUser?.role === 'Viewer'
 
   const projectSim = useMemo(() => {
     let A = 0
@@ -211,7 +215,11 @@ export default function Simulador() {
                     </div>
                   </div>
                   <div className="pt-6 mt-auto">
-                    <Button onClick={() => applyMultiplier(sim1.M)} className="w-full">
+                    <Button
+                      onClick={() => applyMultiplier(sim1.M)}
+                      className="w-full"
+                      disabled={isViewer}
+                    >
                       <CheckCircle2 className="mr-2 h-4 w-4" /> Aplicar ao Projeto
                     </Button>
                     <p className="text-[10px] text-center text-muted-foreground mt-2">
@@ -252,7 +260,11 @@ export default function Simulador() {
                         </div>
                       </div>
                       <div className="pt-6 mt-auto">
-                        <Button onClick={() => applyMultiplier(sim2.M)} className="w-full">
+                        <Button
+                          onClick={() => applyMultiplier(sim2.M)}
+                          className="w-full"
+                          disabled={isViewer}
+                        >
                           <CheckCircle2 className="mr-2 h-4 w-4" /> Aplicar ao Projeto
                         </Button>
                         <p className="text-[10px] text-center text-muted-foreground mt-2">

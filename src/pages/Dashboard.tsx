@@ -13,10 +13,15 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useMainStore } from '@/stores/main'
+import useAuthStore from '@/stores/auth'
+import { cn } from '@/lib/utils'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { folders, templates, createFolder, startNewProject } = useMainStore()
+  const { currentUser } = useAuthStore()
+
+  const isViewer = currentUser?.role === 'Viewer'
 
   const [isOpen, setIsOpen] = useState(false)
   const [folderId, setFolderId] = useState(folders[0]?.id || '')
@@ -52,8 +57,13 @@ export default function Dashboard() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card
-          className="group cursor-pointer hover:border-primary/50 transition-all hover:shadow-md bg-gradient-to-br from-background to-primary/5"
-          onClick={() => setIsOpen(true)}
+          className={cn(
+            'group transition-all bg-gradient-to-br from-background to-primary/5',
+            isViewer
+              ? 'opacity-60 cursor-not-allowed border-muted'
+              : 'cursor-pointer hover:border-primary/50 hover:shadow-md',
+          )}
+          onClick={() => !isViewer && setIsOpen(true)}
         >
           <CardHeader className="flex flex-col items-center justify-center text-center p-10 h-full min-h-[280px]">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -61,7 +71,9 @@ export default function Dashboard() {
             </div>
             <CardTitle className="text-2xl mb-2">Nova Precificação</CardTitle>
             <CardDescription className="text-base max-w-xs">
-              Crie um novo projeto do zero, defina margens e simule diferentes cenários.
+              {isViewer
+                ? 'Você não possui permissão para criar novos projetos.'
+                : 'Crie um novo projeto do zero, defina margens e simule diferentes cenários.'}
             </CardDescription>
           </CardHeader>
         </Card>

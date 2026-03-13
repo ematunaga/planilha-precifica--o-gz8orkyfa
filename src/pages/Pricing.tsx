@@ -24,6 +24,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useMainStore } from '@/stores/main'
+import useAuthStore from '@/stores/auth'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +36,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { toast } from 'sonner'
 import { calculateFinancials } from '@/lib/calculations'
+import { ProjectVersion } from '@/types'
 
 export default function Pricing() {
   const navigate = useNavigate()
@@ -54,6 +56,8 @@ export default function Pricing() {
     saveTemplate,
   } = useMainStore()
 
+  const { currentUser } = useAuthStore()
+
   const [isSaveOpen, setIsSaveOpen] = useState(false)
   const [newVersionName, setNewVersionName] = useState('')
   const [isTemplateOpen, setIsTemplateOpen] = useState(false)
@@ -65,6 +69,14 @@ export default function Pricing() {
   const projectVersions = versions
     .filter((v) => v.projectId === activeProjectId)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+  const isViewer = currentUser?.role === 'Viewer'
+
+  const canDeleteVersion = (v: ProjectVersion) => {
+    if (currentUser?.role === 'Admin') return true
+    if (currentUser?.role === 'Editor') return v.createdBy === currentUser?.id
+    return false
+  }
 
   if (!activeProjectId || !activeProject) {
     return (
@@ -198,13 +210,16 @@ export default function Pricing() {
             </ToggleGroupItem>
           </ToggleGroup>
 
-          <Button variant="outline" size="sm" onClick={() => setIsTemplateOpen(true)}>
-            <BookmarkPlus className="h-4 w-4 mr-2" /> Template
-          </Button>
-
-          <Button size="sm" onClick={() => setIsSaveOpen(true)} className="shadow-sm">
-            <Save className="h-4 w-4 mr-2" /> Salvar Versão
-          </Button>
+          {!isViewer && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setIsTemplateOpen(true)}>
+                <BookmarkPlus className="h-4 w-4 mr-2" /> Template
+              </Button>
+              <Button size="sm" onClick={() => setIsSaveOpen(true)} className="shadow-sm">
+                <Save className="h-4 w-4 mr-2" /> Salvar Versão
+              </Button>
+            </>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -237,18 +252,20 @@ export default function Pricing() {
                         {new Date(v.date).toLocaleString()}
                       </span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        deleteVersion(v.id)
-                        toast.success('Versão apagada')
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
+                    {canDeleteVersion(v) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteVersion(v.id)
+                          toast.success('Versão apagada')
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    )}
                   </DropdownMenuItem>
                 ))
               )}
