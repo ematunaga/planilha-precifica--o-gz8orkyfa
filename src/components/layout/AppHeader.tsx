@@ -1,11 +1,18 @@
-import { DollarSign, Plus } from 'lucide-react'
+import { DollarSign, LogOut } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useMainStore } from '@/stores/main'
+import { useNavigate } from 'react-router-dom'
 
 export function AppHeader() {
-  const { exchangeRate, setExchangeRate } = useMainStore()
+  const { exchangeRate, setExchangeRate, logoutUser } = useMainStore()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logoutUser()
+    navigate('/login')
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -26,12 +33,12 @@ export function AppHeader() {
             step="0.01"
             value={exchangeRate}
             onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 0)}
-            className="h-6 w-16 border-none bg-transparent p-0 text-xs font-bold focus-visible:ring-0"
+            className="h-6 w-16 border-none bg-transparent p-0 text-xs font-bold focus-visible:ring-0 text-right"
+            title="Cotação PTAX"
           />
         </div>
-        <Button size="sm" className="gap-2">
-          <Plus className="size-4" />
-          <span className="hidden sm:inline">Novo Produto</span>
+        <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair do sistema">
+          <LogOut className="size-4 text-muted-foreground" />
         </Button>
       </div>
     </header>

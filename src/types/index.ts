@@ -47,8 +47,20 @@ export interface FinancialResult {
   encargoValues: EncargoRates
 }
 
+export interface Folder {
+  id: string
+  name: string
+}
+
+export interface Project {
+  id: string
+  folderId: string
+  name: string
+}
+
 export interface ProjectVersion {
   id: string
+  projectId: string
   name: string
   date: string
   products: Product[]

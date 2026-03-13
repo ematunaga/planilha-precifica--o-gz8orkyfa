@@ -9,9 +9,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { formatCurrency, formatPercent } from '@/lib/formatters'
 import { useMainStore } from '@/stores/main'
 import { toast } from 'sonner'
+import { useNavigate } from 'react-router-dom'
 
 export default function Simulador() {
-  const { products, exchangeRate, updateProduct } = useMainStore()
+  const { products, exchangeRate, updateProduct, activeProjectId } = useMainStore()
+  const navigate = useNavigate()
 
   const projectSim = useMemo(() => {
     let A = 0
@@ -22,11 +24,9 @@ export default function Simulador() {
     products.forEach((p) => {
       const costInBrl = p.currency === 'USD' ? p.unitCost * exchangeRate : p.unitCost
       const stInBrl = p.currency === 'USD' ? p.st * exchangeRate : p.st
-
       const C_i = costInBrl * p.qty
       const S_i = C_i * p.salesFactor
       const ST_i = stInBrl * p.qty
-
       const t_i = (p.taxRates.icms + p.taxRates.ipi + p.taxRates.pisCofins + p.taxRates.iss) / 100
       const e_i = (p.encargoRates.nf + p.encargoRates.admin + p.encargoRates.comissao) / 100
       const K_i = (1 - t_i) * (1 - e_i)
@@ -49,49 +49,50 @@ export default function Simulador() {
     }
   }, [projectSim.currentSale, targetPrice])
 
-  // Simulation 1: Given Target Sale Price
   const sim1 = useMemo(() => {
     const M = projectSim.currentSale > 0 ? targetPrice / projectSim.currentSale : 0
     const newProfit = M * projectSim.A - projectSim.B
     const newMarginPercent = targetPrice > 0 ? (newProfit / targetPrice) * 100 : 0
     const newAvgFactor = projectSim.currentCost > 0 ? targetPrice / projectSim.currentCost : 0
-
     return { M, newProfit, newMarginPercent, newAvgFactor }
   }, [targetPrice, projectSim])
 
-  // Simulation 2: Given Target Margin %
   const sim2 = useMemo(() => {
     const m_target = targetMarginPercent / 100
     const denom = projectSim.A - m_target * projectSim.currentSale
-
-    if (denom <= 0 || projectSim.currentSale === 0) {
+    if (denom <= 0 || projectSim.currentSale === 0)
       return { requiredSale: 0, M: 0, newAvgFactor: 0, newProfit: 0 }
-    }
-
     const M = projectSim.B / denom
     const requiredSale = M * projectSim.currentSale
     const newAvgFactor = projectSim.currentCost > 0 ? requiredSale / projectSim.currentCost : 0
     const newProfit = requiredSale * m_target
-
     return { requiredSale, M, newAvgFactor, newProfit }
   }, [targetMarginPercent, projectSim])
 
   const applyMultiplier = (multiplier: number) => {
     if (multiplier <= 0) return
-    products.forEach((p) => {
-      updateProduct(p.id, { salesFactor: p.salesFactor * multiplier })
-    })
+    products.forEach((p) => updateProduct(p.id, { salesFactor: p.salesFactor * multiplier }))
     toast.success('Fatores de venda atualizados em todo o projeto!')
+  }
+
+  if (!activeProjectId) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+        <Target className="h-16 w-16 text-muted-foreground opacity-20" />
+        <h2 className="text-xl font-semibold">Nenhum projeto ativo</h2>
+        <p className="text-muted-foreground text-center max-w-sm">
+          Para utilizar o simulador de metas, você precisa ter um projeto aberto.
+        </p>
+        <Button onClick={() => navigate('/projetos')}>Abrir Projeto Existente</Button>
+      </div>
+    )
   }
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mx-auto w-full">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Simulador do Projeto</h2>
-        <p className="text-muted-foreground">
-          Simule metas financeiras para todo o projeto atual. O simulador considera a estrutura em
-          cascata de impostos e encargos de cada item.
-        </p>
+        <p className="text-muted-foreground">Simule metas financeiras para todo o projeto atual.</p>
       </div>
 
       {products.length === 0 ? (
@@ -112,8 +113,7 @@ export default function Simulador() {
             <Card className="shadow-subtle border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Calculator className="h-5 w-5 text-primary" />
-                  Parâmetros de Simulação
+                  <Calculator className="h-5 w-5 text-primary" /> Parâmetros de Simulação
                 </CardTitle>
                 <CardDescription>Defina sua meta financeira global</CardDescription>
               </CardHeader>
@@ -121,8 +121,7 @@ export default function Simulador() {
                 <TabsContent value="price" className="m-0 space-y-4">
                   <div className="space-y-2 bg-primary/5 p-4 rounded-lg border border-primary/10">
                     <Label className="flex items-center gap-2 font-semibold text-primary">
-                      <Target className="h-4 w-4" />
-                      Valor Alvo do Projeto (R$)
+                      <Target className="h-4 w-4" /> Valor Alvo do Projeto (R$)
                     </Label>
                     <Input
                       type="number"
@@ -139,8 +138,7 @@ export default function Simulador() {
                 <TabsContent value="margin" className="m-0 space-y-4">
                   <div className="space-y-2 bg-primary/5 p-4 rounded-lg border border-primary/10">
                     <Label className="flex items-center gap-2 font-semibold text-primary">
-                      <Target className="h-4 w-4" />
-                      Margem Líquida Alvo (%)
+                      <Target className="h-4 w-4" /> Margem Líquida Alvo (%)
                     </Label>
                     <Input
                       type="number"
@@ -181,8 +179,7 @@ export default function Simulador() {
             <Card className="bg-primary/5 shadow-subtle border-primary/20 flex flex-col">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <ArrowRight className="h-5 w-5 text-primary" />
-                  Resultados da Simulação
+                  <ArrowRight className="h-5 w-5 text-primary" /> Resultados
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
@@ -215,8 +212,7 @@ export default function Simulador() {
                   </div>
                   <div className="pt-6 mt-auto">
                     <Button onClick={() => applyMultiplier(sim1.M)} className="w-full">
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Aplicar ao Projeto
+                      <CheckCircle2 className="mr-2 h-4 w-4" /> Aplicar ao Projeto
                     </Button>
                     <p className="text-[10px] text-center text-muted-foreground mt-2">
                       Multiplica os fatores de venda de todos os itens por {sim1.M.toFixed(4)}.
@@ -257,8 +253,7 @@ export default function Simulador() {
                       </div>
                       <div className="pt-6 mt-auto">
                         <Button onClick={() => applyMultiplier(sim2.M)} className="w-full">
-                          <CheckCircle2 className="mr-2 h-4 w-4" />
-                          Aplicar ao Projeto
+                          <CheckCircle2 className="mr-2 h-4 w-4" /> Aplicar ao Projeto
                         </Button>
                         <p className="text-[10px] text-center text-muted-foreground mt-2">
                           Multiplica os fatores de venda de todos os itens por {sim2.M.toFixed(4)}.

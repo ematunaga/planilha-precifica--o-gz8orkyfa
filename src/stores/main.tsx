@@ -1,21 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { Product, ProjectVersion } from '@/types'
-
-interface MainStoreState {
-  products: Product[]
-  exchangeRate: number
-  displayCurrency: 'BRL' | 'USD'
-  versions: ProjectVersion[]
-  setExchangeRate: (rate: number) => void
-  setDisplayCurrency: (currency: 'BRL' | 'USD') => void
-  updateProduct: (id: string, updates: Partial<Product>) => void
-  addProduct: (product: Product) => void
-  removeProduct: (id: string) => void
-  saveVersion: (name: string) => void
-  loadVersion: (id: string) => void
-  deleteVersion: (id: string) => void
-  setProducts: (products: Product[]) => void
-}
+import { Product, ProjectVersion, Folder, Project } from '@/types'
 
 const defaultProducts: Product[] = [
   {
@@ -34,20 +18,6 @@ const defaultProducts: Product[] = [
   },
   {
     id: '2',
-    pn: 'WIN-SVR-2022',
-    description: 'Windows Server 2022 Standard',
-    type: 'SW',
-    currency: 'USD',
-    qty: 2,
-    unitCost: 970.0,
-    st: 0,
-    salesModel: 'Direct',
-    taxRates: { icms: 5, ipi: 0, pisCofins: 9.25, iss: 0 },
-    encargoRates: { nf: 2, admin: 5, comissao: 5 },
-    salesFactor: 1.8,
-  },
-  {
-    id: '3',
     pn: 'SRV-INST-01',
     description: 'Instalação e Configuração On-Site',
     type: 'Serviço',
@@ -62,106 +32,202 @@ const defaultProducts: Product[] = [
   },
 ]
 
+interface MainStoreState {
+  isAuthenticated: boolean
+  loginUser: () => void
+  logoutUser: () => void
+  folders: Folder[]
+  projects: Project[]
+  versions: ProjectVersion[]
+  activeProjectId: string | null
+  activeVersionId: string | null
+  products: Product[]
+  exchangeRate: number
+  displayCurrency: 'BRL' | 'USD'
+  setExchangeRate: (rate: number) => void
+  setDisplayCurrency: (c: 'BRL' | 'USD') => void
+  updateProduct: (id: string, updates: Partial<Product>) => void
+  addProduct: (product: Product) => void
+  removeProduct: (id: string) => void
+  setProducts: (products: Product[]) => void
+  createFolder: (name: string) => string
+  createProject: (folderId: string, name: string) => string
+  createVersion: (projectId: string, name: string) => string
+  loadVersion: (versionId: string) => void
+  deleteVersion: (id: string) => void
+  deleteProject: (id: string) => void
+  deleteFolder: (id: string) => void
+  startNewProject: (folderId: string, pName: string, vName: string) => void
+}
+
 const MainStoreContext = createContext<MainStoreState | null>(null)
 
 export function MainStoreProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem('pricing_products')
-    return saved ? JSON.parse(saved) : defaultProducts
-  })
-
-  const [exchangeRate, setExchangeRate] = useState<number>(() => {
-    const saved = localStorage.getItem('pricing_exchange_rate')
-    return saved ? parseFloat(saved) : 5.15
-  })
-
-  const [displayCurrency, setDisplayCurrency] = useState<'BRL' | 'USD'>(() => {
-    return (localStorage.getItem('pricing_display_currency') as 'BRL' | 'USD') || 'BRL'
-  })
-
-  const [versions, setVersions] = useState<ProjectVersion[]>(() => {
-    const saved = localStorage.getItem('pricing_versions')
-    return saved ? JSON.parse(saved) : []
-  })
+  const [isAuthenticated, setIsAuth] = useState(() => localStorage.getItem('p_auth') === 'true')
+  const [folders, setFolders] = useState<Folder[]>(() =>
+    JSON.parse(localStorage.getItem('p_fld') || '[{"id":"1","name":"Meus Projetos"}]'),
+  )
+  const [projects, setProjects] = useState<Project[]>(() =>
+    JSON.parse(localStorage.getItem('p_prj') || '[]'),
+  )
+  const [versions, setVersions] = useState<ProjectVersion[]>(() =>
+    JSON.parse(localStorage.getItem('p_ver') || '[]'),
+  )
+  const [activeProjectId, setPID] = useState<string | null>(() => localStorage.getItem('p_pid'))
+  const [activeVersionId, setVID] = useState<string | null>(() => localStorage.getItem('p_vid'))
+  const [products, setProducts] = useState<Product[]>(defaultProducts)
+  const [exchangeRate, setExchangeRate] = useState<number>(5.15)
+  const [displayCurrency, setDisplayCurrency] = useState<'BRL' | 'USD'>('BRL')
 
   useEffect(() => {
-    localStorage.setItem('pricing_products', JSON.stringify(products))
-  }, [products])
-
+    localStorage.setItem('p_auth', String(isAuthenticated))
+  }, [isAuthenticated])
   useEffect(() => {
-    localStorage.setItem('pricing_exchange_rate', exchangeRate.toString())
-  }, [exchangeRate])
-
+    localStorage.setItem('p_fld', JSON.stringify(folders))
+  }, [folders])
   useEffect(() => {
-    localStorage.setItem('pricing_display_currency', displayCurrency)
-  }, [displayCurrency])
-
+    localStorage.setItem('p_prj', JSON.stringify(projects))
+  }, [projects])
   useEffect(() => {
-    localStorage.setItem('pricing_versions', JSON.stringify(versions))
+    localStorage.setItem('p_ver', JSON.stringify(versions))
   }, [versions])
+  useEffect(() => {
+    activeProjectId
+      ? localStorage.setItem('p_pid', activeProjectId)
+      : localStorage.removeItem('p_pid')
+  }, [activeProjectId])
+  useEffect(() => {
+    activeVersionId
+      ? localStorage.setItem('p_vid', activeVersionId)
+      : localStorage.removeItem('p_vid')
+  }, [activeVersionId])
 
-  const updateProduct = (id: string, updates: Partial<Product>) => {
-    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)))
+  const loginUser = () => setIsAuth(true)
+  const logoutUser = () => {
+    setIsAuth(false)
+    setPID(null)
+    setVID(null)
   }
 
-  const addProduct = (product: Product) => {
-    setProducts((prev) => [product, ...prev])
+  const createFolder = (name: string) => {
+    const id = Date.now().toString()
+    setFolders((p) => [...p, { id, name }])
+    return id
+  }
+  const createProject = (folderId: string, name: string) => {
+    const id = Date.now().toString()
+    setProjects((p) => [...p, { id, folderId, name }])
+    return id
+  }
+  const createVersion = (projectId: string, name: string) => {
+    const id = Date.now().toString()
+    setVersions((p) => [
+      ...p,
+      {
+        id,
+        projectId,
+        name,
+        date: new Date().toISOString(),
+        products: [...products],
+        exchangeRate,
+      },
+    ])
+    setVID(id)
+    return id
   }
 
-  const removeProduct = (id: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id))
-  }
-
-  const saveVersion = (name: string) => {
-    const newVersion: ProjectVersion = {
-      id: Date.now().toString(),
-      name,
-      date: new Date().toISOString(),
-      products: [...products],
-      exchangeRate,
-    }
-    setVersions((prev) => [newVersion, ...prev])
-  }
-
-  const loadVersion = (id: string) => {
-    const v = versions.find((v) => v.id === id)
+  const loadVersion = (versionId: string) => {
+    const v = versions.find((v) => v.id === versionId)
     if (v) {
       setProducts(v.products)
       setExchangeRate(v.exchangeRate)
+      setPID(v.projectId)
+      setVID(v.id)
+    }
+  }
+
+  const startNewProject = (folderId: string, pName: string, vName: string) => {
+    const pid = createProject(folderId, pName)
+    setPID(pid)
+    setProducts(defaultProducts)
+    const vid = Date.now().toString()
+    setVersions((p) => [
+      ...p,
+      {
+        id: vid,
+        projectId: pid,
+        name: vName,
+        date: new Date().toISOString(),
+        products: [...defaultProducts],
+        exchangeRate,
+      },
+    ])
+    setVID(vid)
+  }
+
+  const deleteFolder = (id: string) => {
+    setFolders((p) => p.filter((f) => f.id !== id))
+    const pids = projects.filter((p) => p.folderId === id).map((p) => p.id)
+    setProjects((p) => p.filter((p) => p.folderId !== id))
+    setVersions((p) => p.filter((v) => !pids.includes(v.projectId)))
+    if (pids.includes(activeProjectId!)) {
+      setPID(null)
+      setVID(null)
+    }
+  }
+
+  const deleteProject = (id: string) => {
+    setProjects((p) => p.filter((p) => p.id !== id))
+    setVersions((p) => p.filter((v) => v.projectId !== id))
+    if (activeProjectId === id) {
+      setPID(null)
+      setVID(null)
     }
   }
 
   const deleteVersion = (id: string) => {
-    setVersions((prev) => prev.filter((v) => v.id !== id))
+    setVersions((p) => p.filter((v) => v.id !== id))
+    if (activeVersionId === id) setVID(null)
   }
 
-  return React.createElement(
-    MainStoreContext.Provider,
-    {
-      value: {
-        products,
-        exchangeRate,
-        displayCurrency,
-        versions,
-        setExchangeRate,
-        setDisplayCurrency,
-        updateProduct,
-        addProduct,
-        removeProduct,
-        saveVersion,
-        loadVersion,
-        deleteVersion,
-        setProducts,
-      },
-    },
-    children,
-  )
+  const updateProduct = (id: string, upd: Partial<Product>) =>
+    setProducts((p) => p.map((x) => (x.id === id ? { ...x, ...upd } : x)))
+  const addProduct = (product: Product) => setProducts((p) => [product, ...p])
+  const removeProduct = (id: string) => setProducts((p) => p.filter((x) => x.id !== id))
+
+  const store = {
+    isAuthenticated,
+    loginUser,
+    logoutUser,
+    folders,
+    projects,
+    versions,
+    activeProjectId,
+    activeVersionId,
+    products,
+    exchangeRate,
+    displayCurrency,
+    setExchangeRate,
+    setDisplayCurrency,
+    updateProduct,
+    addProduct,
+    removeProduct,
+    setProducts,
+    createFolder,
+    createProject,
+    createVersion,
+    loadVersion,
+    deleteVersion,
+    deleteProject,
+    deleteFolder,
+    startNewProject,
+  }
+
+  return React.createElement(MainStoreContext.Provider, { value: store }, children)
 }
 
-export function useMainStore() {
+export const useMainStore = () => {
   const context = useContext(MainStoreContext)
-  if (!context) {
-    throw new Error('useMainStore must be used within a MainStoreProvider')
-  }
+  if (!context) throw new Error('useMainStore must be used within a MainStoreProvider')
   return context
 }
