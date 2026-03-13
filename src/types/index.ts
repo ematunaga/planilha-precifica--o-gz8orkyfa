@@ -36,4 +36,6 @@ export interface FinancialResult {
   netValue: number
   netMargin: number
   netMarginPercent: number
+  taxValues: TaxRates
+  encargoValues: EncargoRates
 }

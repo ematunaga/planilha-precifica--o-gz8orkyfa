@@ -1,18 +1,20 @@
-import { useState, useRef, useEffect } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useMainStore } from '@/stores/main'
 import { Product } from '@/types'
 import { calculateFinancials } from '@/lib/calculations'
 import { formatCurrency, formatPercent, formatNumber } from '@/lib/formatters'
 import { RowDetailsChart } from './RowDetailsChart'
+import { ProductEditForm } from './ProductEditForm'
 import { cn } from '@/lib/utils'
 
 export function PricingRow({ product }: { product: Product }) {
-  const { exchangeRate, updateProduct } = useMainStore()
+  const { exchangeRate, updateProduct, removeProduct } = useMainStore()
   const [isOpen, setIsOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -137,19 +139,39 @@ export function PricingRow({ product }: { product: Product }) {
           </div>
         </TableCell>
         <TableCell>
-          {isOpen ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          )}
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+              onClick={() => removeProduct(product.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground shrink-0"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </div>
         </TableCell>
       </TableRow>
 
       {isOpen && (
-        <TableRow className="bg-muted/30 hover:bg-muted/30">
-          <TableCell colSpan={9} className="p-0 border-b">
+        <TableRow className="bg-muted/10 hover:bg-muted/10 border-b-2 border-primary/20">
+          <TableCell colSpan={9} className="p-4">
             <div className="animate-in slide-in-from-top-2 fade-in duration-200">
-              <RowDetailsChart financials={financials} />
+              <div className="flex flex-col xl:flex-row gap-6">
+                <div className="flex-1">
+                  <ProductEditForm product={product} financials={financials} />
+                </div>
+                <div className="w-full xl:w-[350px] flex items-center justify-center bg-card rounded-lg border p-4 shadow-sm shrink-0">
+                  <RowDetailsChart financials={financials} />
+                </div>
+              </div>
             </div>
           </TableCell>
         </TableRow>

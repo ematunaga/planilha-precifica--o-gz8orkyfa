@@ -7,18 +7,21 @@ export function calculateFinancials(product: Product, exchangeRate: number): Fin
   const totalSalePrice = unitSalePrice * product.qty
   const totalPurchaseCost = costInBrl * product.qty
 
-  const taxSumRate =
-    (product.taxRates.icms +
-      product.taxRates.ipi +
-      product.taxRates.pisCofins +
-      product.taxRates.iss) /
-    100
+  const taxValues = {
+    icms: totalSalePrice * (product.taxRates.icms / 100),
+    ipi: totalSalePrice * (product.taxRates.ipi / 100),
+    pisCofins: totalSalePrice * (product.taxRates.pisCofins / 100),
+    iss: totalSalePrice * (product.taxRates.iss / 100),
+  }
 
-  const encargoSumRate =
-    (product.encargoRates.nf + product.encargoRates.admin + product.encargoRates.comissao) / 100
+  const encargoValues = {
+    nf: totalSalePrice * (product.encargoRates.nf / 100),
+    admin: totalSalePrice * (product.encargoRates.admin / 100),
+    comissao: totalSalePrice * (product.encargoRates.comissao / 100),
+  }
 
-  const totalTaxesValue = totalSalePrice * taxSumRate
-  const totalEncargosValue = totalSalePrice * encargoSumRate
+  const totalTaxesValue = taxValues.icms + taxValues.ipi + taxValues.pisCofins + taxValues.iss
+  const totalEncargosValue = encargoValues.nf + encargoValues.admin + encargoValues.comissao
 
   const netValue = totalSalePrice - totalTaxesValue - totalEncargosValue
   const netMargin = netValue - totalPurchaseCost
@@ -33,6 +36,8 @@ export function calculateFinancials(product: Product, exchangeRate: number): Fin
     netValue,
     netMargin,
     netMarginPercent,
+    taxValues,
+    encargoValues,
   }
 }
 

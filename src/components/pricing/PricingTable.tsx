@@ -1,13 +1,22 @@
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCell,
+} from '@/components/ui/table'
 import { Card } from '@/components/ui/card'
 import { PricingRow } from './PricingRow'
 import { useMainStore } from '@/stores/main'
-import { Search } from 'lucide-react'
+import { Search, Plus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { useState } from 'react'
+import { Product } from '@/types'
 
 export function PricingTable() {
-  const { products } = useMainStore()
+  const { products, addProduct } = useMainStore()
   const [search, setSearch] = useState('')
 
   const filteredProducts = products.filter(
@@ -16,26 +25,48 @@ export function PricingTable() {
       p.description.toLowerCase().includes(search.toLowerCase()),
   )
 
+  const handleAddProduct = () => {
+    const newProduct: Product = {
+      id: Date.now().toString(),
+      pn: 'NOVO-ITEM',
+      description: 'Novo item ou serviço',
+      type: 'HW',
+      currency: 'BRL',
+      qty: 1,
+      unitCost: 100,
+      taxRates: { icms: 0, ipi: 0, pisCofins: 9.25, iss: 0 },
+      encargoRates: { nf: 2, admin: 5, comissao: 3 },
+      salesFactor: 1.5,
+    }
+    addProduct(newProduct)
+  }
+
   return (
     <Card className="overflow-hidden border shadow-sm flex flex-col">
-      <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
+      <div className="p-4 border-b bg-muted/20 flex flex-col sm:flex-row items-center justify-between gap-4">
         <h2 className="text-lg font-semibold tracking-tight">Planilha de Custos</h2>
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Buscar Part Number..."
-            className="h-9 pl-9 bg-background"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar Part Number..."
+              className="h-9 pl-9 bg-background"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Button onClick={handleAddProduct} size="sm" className="h-9 shrink-0">
+            <Plus className="h-4 w-4 mr-1" />
+            Adicionar
+          </Button>
         </div>
       </div>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
-              <TableHead className="w-[250px]">Produto</TableHead>
+              <TableHead className="w-[200px] lg:w-[250px]">Produto</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead className="text-right">Qtd</TableHead>
               <TableHead className="text-right">Custo</TableHead>
@@ -43,7 +74,7 @@ export function PricingTable() {
               <TableHead className="text-right hidden lg:table-cell">Encargos</TableHead>
               <TableHead className="text-right w-[120px]">Fator / Preço</TableHead>
               <TableHead className="text-right w-[120px]">Resultado Líq.</TableHead>
-              <TableHead className="w-[40px]"></TableHead>
+              <TableHead className="w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
