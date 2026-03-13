@@ -92,14 +92,18 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('p_ver', JSON.stringify(versions))
   }, [versions])
   useEffect(() => {
-    activeProjectId
-      ? localStorage.setItem('p_pid', activeProjectId)
-      : localStorage.removeItem('p_pid')
+    if (activeProjectId) {
+      localStorage.setItem('p_pid', activeProjectId)
+    } else {
+      localStorage.removeItem('p_pid')
+    }
   }, [activeProjectId])
   useEffect(() => {
-    activeVersionId
-      ? localStorage.setItem('p_vid', activeVersionId)
-      : localStorage.removeItem('p_vid')
+    if (activeVersionId) {
+      localStorage.setItem('p_vid', activeVersionId)
+    } else {
+      localStorage.removeItem('p_vid')
+    }
   }, [activeVersionId])
 
   const loginUser = () => setIsAuth(true)
