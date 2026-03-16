@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import {
   Card,
   CardContent,
@@ -13,17 +13,36 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Package2 } from 'lucide-react'
 import { toast } from 'sonner'
-import useAuthStore from '@/stores/auth'
+import { useAuth } from '@/hooks/use-auth'
+import { checkInvitation, acceptInvitation } from '@/services/users'
 
 export default function Register() {
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get('token')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const navigate = useNavigate()
-  const { registerUser } = useAuthStore()
+  const [invitation, setInvitation] = useState<any>(null)
 
-  const handleRegister = (e: React.FormEvent) => {
+  const navigate = useNavigate()
+  const { signUp } = useAuth()
+
+  useEffect(() => {
+    if (token) {
+      checkInvitation(token).then((data) => {
+        if (data && data.status === 'Pending') {
+          setInvitation(data)
+          setEmail(data.email)
+          toast.success(`Convite identificado para ${data.email}!`)
+        } else {
+          toast.error('Convite inválido ou já utilizado.')
+        }
+      })
+    }
+  }, [token])
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!email.includes('@')) {
@@ -36,12 +55,23 @@ export default function Register() {
       return
     }
 
-    const res = registerUser(name, email, password)
-    if (res.success) {
-      toast.success('Conta criada! Aguarde a autorização de um administrador.')
-      navigate('/login')
+    const role = invitation ? invitation.role : 'Viewer'
+    const status = invitation ? 'Authorized' : 'Pending'
+
+    const { error } = await signUp(email, password, { name, role, status })
+
+    if (error) {
+      toast.error(error.message || 'Erro ao criar conta.')
     } else {
-      toast.error(res.message || 'Erro ao criar conta.')
+      if (invitation) {
+        await acceptInvitation(token!)
+      }
+      toast.success(
+        invitation
+          ? 'Conta criada e autorizada com sucesso!'
+          : 'Conta criada! Aguarde a autorização de um administrador.',
+      )
+      navigate('/login')
     }
   }
 
@@ -56,7 +86,11 @@ export default function Register() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Criar Nova Conta</CardTitle>
-          <CardDescription>Cadastre-se para começar a precificar.</CardDescription>
+          <CardDescription>
+            {invitation
+              ? 'Complete seu cadastro a partir do convite.'
+              : 'Cadastre-se para começar a precificar.'}
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleRegister}>
           <CardContent className="space-y-4">
@@ -81,6 +115,7 @@ export default function Register() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={!!invitation}
                 className="h-11"
               />
             </div>

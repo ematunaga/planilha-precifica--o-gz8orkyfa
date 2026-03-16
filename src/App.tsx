@@ -3,7 +3,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { MainStoreProvider } from '@/stores/main'
-import useAuthStore, { AuthStoreProvider } from '@/stores/auth'
+import { AuthProvider, useAuth } from '@/hooks/use-auth'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
@@ -15,10 +15,51 @@ import Simulador from '@/pages/Simulador'
 import Configuracoes from '@/pages/Configuracoes'
 import Users from '@/pages/Users'
 import NotFound from '@/pages/NotFound'
+import { AlertCircle, Lock } from 'lucide-react'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuthStore()
-  if (!isAuthenticated) return <Navigate to="/login" replace />
+  const { isAuthenticated, loading, profile } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-background">
+        Carregando...
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (profile?.status === 'Pending') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-background p-4 text-center">
+        <div className="bg-card p-8 rounded-xl shadow-xl border border-primary/10 max-w-md animate-in fade-in slide-in-from-bottom-4">
+          <Lock className="w-12 h-12 text-primary mx-auto mb-4 opacity-50" />
+          <h2 className="text-2xl font-bold mb-2">Conta Pendente</h2>
+          <p className="text-muted-foreground">
+            Sua conta foi criada e está aguardando autorização de um administrador.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (profile?.status === 'Revoked') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-background p-4 text-center">
+        <div className="bg-card p-8 rounded-xl shadow-xl border border-destructive/20 max-w-md animate-in fade-in slide-in-from-bottom-4">
+          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4 opacity-80" />
+          <h2 className="text-2xl font-bold mb-2 text-destructive">Acesso Revogado</h2>
+          <p className="text-muted-foreground">
+            Seu acesso ao sistema foi revogado. Por favor, contate o administrador.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return <>{children}</>
 }
 
@@ -48,7 +89,7 @@ const AppRoutes = () => {
 }
 
 const App = () => (
-  <AuthStoreProvider>
+  <AuthProvider>
     <MainStoreProvider>
       <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
         <TooltipProvider>
@@ -58,7 +99,7 @@ const App = () => (
         </TooltipProvider>
       </BrowserRouter>
     </MainStoreProvider>
-  </AuthStoreProvider>
+  </AuthProvider>
 )
 
 export default App

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Folder, FolderPlus, FileText, ChevronRight, Trash2 } from 'lucide-react'
 import { useMainStore } from '@/stores/main'
-import useAuthStore from '@/stores/auth'
+import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,7 +29,7 @@ export default function Projetos() {
     deleteVersion,
     loadVersion,
   } = useMainStore()
-  const { currentUser } = useAuthStore()
+  const { profile } = useAuth()
   const navigate = useNavigate()
 
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(folders[0]?.id || null)
@@ -39,24 +39,24 @@ export default function Projetos() {
   const activeFolderProjects = projects.filter((p) => p.folderId === selectedFolderId)
 
   const canDeleteFolder = (f: FolderType) => {
-    if (currentUser?.role === 'Admin') return true
-    if (currentUser?.role === 'Editor') return f.createdBy === currentUser?.id
+    if (profile?.role === 'Admin') return true
+    if (profile?.role === 'Editor') return f.createdBy === profile?.id
     return false
   }
 
   const canDeleteProject = (p: Project) => {
-    if (currentUser?.role === 'Admin') return true
-    if (currentUser?.role === 'Editor') return p.createdBy === currentUser?.id
+    if (profile?.role === 'Admin') return true
+    if (profile?.role === 'Editor') return p.createdBy === profile?.id
     return false
   }
 
   const canDeleteVersion = (v: ProjectVersion) => {
-    if (currentUser?.role === 'Admin') return true
-    if (currentUser?.role === 'Editor') return v.createdBy === currentUser?.id
+    if (profile?.role === 'Admin') return true
+    if (profile?.role === 'Editor') return v.createdBy === profile?.id
     return false
   }
 
-  const isViewer = currentUser?.role === 'Viewer'
+  const isViewer = profile?.role === 'Viewer' || profile?.role === 'Visualizador'
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {

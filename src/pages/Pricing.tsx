@@ -24,7 +24,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useMainStore } from '@/stores/main'
-import useAuthStore from '@/stores/auth'
+import { useAuth } from '@/hooks/use-auth'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,7 +56,7 @@ export default function Pricing() {
     saveTemplate,
   } = useMainStore()
 
-  const { currentUser } = useAuthStore()
+  const { profile } = useAuth()
 
   const [isSaveOpen, setIsSaveOpen] = useState(false)
   const [newVersionName, setNewVersionName] = useState('')
@@ -70,11 +70,11 @@ export default function Pricing() {
     .filter((v) => v.projectId === activeProjectId)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-  const isViewer = currentUser?.role === 'Viewer'
+  const isViewer = profile?.role === 'Viewer' || profile?.role === 'Visualizador'
 
   const canDeleteVersion = (v: ProjectVersion) => {
-    if (currentUser?.role === 'Admin') return true
-    if (currentUser?.role === 'Editor') return v.createdBy === currentUser?.id
+    if (profile?.role === 'Admin') return true
+    if (profile?.role === 'Editor') return v.createdBy === profile?.id
     return false
   }
 
@@ -86,7 +86,7 @@ export default function Pricing() {
         <p className="text-muted-foreground text-center max-w-sm">
           Para acessar a planilha, crie um novo projeto ou abra um existente.
         </p>
-        <Button onClick={() => navigate('/')}>Ir para o Dashboard</Button>
+        <Button onClick={() => navigate('/projetos')}>Ir para Projetos</Button>
       </div>
     )
   }

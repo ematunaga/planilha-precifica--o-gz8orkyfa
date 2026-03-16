@@ -20,12 +20,12 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { useMainStore } from '@/stores/main'
-import useAuthStore from '@/stores/auth'
+import { useAuth } from '@/hooks/use-auth'
 
 export function AppSidebar() {
   const location = useLocation()
   const { activeProjectId } = useMainStore()
-  const { currentUser } = useAuthStore()
+  const { profile } = useAuth()
 
   const navItems = [
     { title: 'Dashboard', url: '/', icon: LayoutDashboard },
@@ -34,11 +34,11 @@ export function AppSidebar() {
       ? [{ title: 'Precificação Atual', url: '/precificacao', icon: Table2 }]
       : []),
     { title: 'Simulador', url: '/simulador', icon: Calculator },
-    ...(currentUser?.role === 'Admin'
+    ...(profile?.role === 'Admin'
       ? [{ title: 'Configurações', url: '/configuracoes', icon: Settings }]
       : []),
-    ...(currentUser?.role === 'Admin'
-      ? [{ title: 'Gestão de Usuário', url: '/usuarios', icon: Users }]
+    ...(profile?.role === 'Admin'
+      ? [{ title: 'Gestão de Usuários', url: '/usuarios', icon: Users }]
       : []),
   ]
 

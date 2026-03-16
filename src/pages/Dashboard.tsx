@@ -13,15 +13,15 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useMainStore } from '@/stores/main'
-import useAuthStore from '@/stores/auth'
+import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const { folders, templates, createFolder, startNewProject } = useMainStore()
-  const { currentUser } = useAuthStore()
+  const { profile } = useAuth()
 
-  const isViewer = currentUser?.role === 'Viewer'
+  const isViewer = profile?.role === 'Viewer' || profile?.role === 'Visualizador'
 
   const [isOpen, setIsOpen] = useState(false)
   const [folderId, setFolderId] = useState(folders[0]?.id || '')

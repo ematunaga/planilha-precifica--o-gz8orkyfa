@@ -8,16 +8,16 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { formatCurrency, formatPercent } from '@/lib/formatters'
 import { useMainStore } from '@/stores/main'
-import useAuthStore from '@/stores/auth'
+import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 
 export default function Simulador() {
   const { products, exchangeRate, updateProduct, activeProjectId } = useMainStore()
-  const { currentUser } = useAuthStore()
+  const { profile } = useAuth()
   const navigate = useNavigate()
 
-  const isViewer = currentUser?.role === 'Viewer'
+  const isViewer = profile?.role === 'Viewer' || profile?.role === 'Visualizador'
 
   const projectSim = useMemo(() => {
     let A = 0

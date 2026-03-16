@@ -11,24 +11,24 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
-import useAuthStore from '@/stores/auth'
+import { useAuth } from '@/hooks/use-auth'
 import { Package2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const { loginUser } = useAuthStore()
+  const { signIn } = useAuth()
   const navigate = useNavigate()
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (email && password) {
-      const res = loginUser(email, password)
-      if (res.success) {
+      const { error } = await signIn(email, password)
+      if (!error) {
         navigate('/')
       } else {
-        toast.error(res.message)
+        toast.error(error.message || 'Credenciais inválidas.')
       }
     }
   }

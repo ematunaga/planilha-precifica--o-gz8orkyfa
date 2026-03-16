@@ -8,7 +8,7 @@ import {
   TaxRates,
   EncargoRates,
 } from '@/types'
-import useAuthStore from '@/stores/auth'
+import { useAuth } from '@/hooks/use-auth'
 
 const defaultProducts: Product[] = [
   {
@@ -74,7 +74,7 @@ interface MainStoreState {
 const MainStoreContext = createContext<MainStoreState | null>(null)
 
 export function MainStoreProvider({ children }: { children: ReactNode }) {
-  const { currentUser } = useAuthStore()
+  const { profile } = useAuth()
 
   const [folders, setFolders] = useState<Folder[]>(() =>
     JSON.parse(localStorage.getItem('p_fld') || '[{"id":"1","name":"Meus Projetos"}]'),
@@ -144,12 +144,12 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
 
   const createFolder = (name: string) => {
     const id = Date.now().toString()
-    setFolders((p) => [...p, { id, name, createdBy: currentUser?.id }])
+    setFolders((p) => [...p, { id, name, createdBy: profile?.id }])
     return id
   }
   const createProject = (folderId: string, name: string, templateId?: string) => {
     const id = Date.now().toString()
-    setProjects((p) => [...p, { id, folderId, name, templateId, createdBy: currentUser?.id }])
+    setProjects((p) => [...p, { id, folderId, name, templateId, createdBy: profile?.id }])
     return id
   }
   const createVersion = (projectId: string, name: string) => {
@@ -163,7 +163,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
         date: new Date().toISOString(),
         products: [...products],
         exchangeRate,
-        createdBy: currentUser?.id,
+        createdBy: profile?.id,
       },
     ])
     setVID(id)

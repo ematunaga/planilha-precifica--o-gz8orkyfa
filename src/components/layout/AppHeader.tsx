@@ -4,7 +4,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useMainStore } from '@/stores/main'
-import useAuthStore from '@/stores/auth'
+import { useAuth } from '@/hooks/use-auth'
 import { useNavigate } from 'react-router-dom'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -28,33 +28,31 @@ import { toast } from 'sonner'
 
 export function AppHeader() {
   const { exchangeRate, setExchangeRate } = useMainStore()
-  const { currentUser, logoutUser, changePassword } = useAuthStore()
+  const { profile, signOut, changePassword } = useAuth()
   const navigate = useNavigate()
 
   const [isPwdOpen, setIsPwdOpen] = useState(false)
-  const [currentPwd, setCurrentPwd] = useState('')
   const [newPwd, setNewPwd] = useState('')
   const [confirmPwd, setConfirmPwd] = useState('')
 
-  const handleLogout = () => {
-    logoutUser()
+  const handleLogout = async () => {
+    await signOut()
     navigate('/login')
   }
 
-  const handlePwdChange = () => {
+  const handlePwdChange = async () => {
     if (newPwd !== confirmPwd) {
       toast.error('As novas senhas não coincidem.')
       return
     }
-    const success = changePassword(currentPwd, newPwd)
-    if (success) {
+    const { error } = await changePassword(newPwd)
+    if (!error) {
       toast.success('Senha alterada com sucesso!')
       setIsPwdOpen(false)
-      setCurrentPwd('')
       setNewPwd('')
       setConfirmPwd('')
     } else {
-      toast.error('Senha atual incorreta.')
+      toast.error(error.message || 'Erro ao alterar a senha.')
     }
   }
 
@@ -90,7 +88,7 @@ export function AppHeader() {
             >
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                  {currentUser?.name.charAt(0).toUpperCase() || 'U'}
+                  {profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -98,14 +96,14 @@ export function AppHeader() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{currentUser?.name}</p>
-                <p className="text-xs leading-none text-muted-foreground">{currentUser?.email}</p>
+                <p className="text-sm font-medium leading-none">{profile?.name}</p>
+                <p className="text-xs leading-none text-muted-foreground">{profile?.email}</p>
                 <div className="mt-2 pt-1">
                   <Badge
                     variant="secondary"
                     className="text-[10px] uppercase font-semibold tracking-wider px-2"
                   >
-                    {currentUser?.role}
+                    {profile?.role}
                   </Badge>
                 </div>
               </div>
@@ -133,15 +131,6 @@ export function AppHeader() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Senha Atual</Label>
-              <Input
-                type="password"
-                value={currentPwd}
-                onChange={(e) => setCurrentPwd(e.target.value)}
-                placeholder="Sua senha atual"
-              />
-            </div>
-            <div className="space-y-2">
               <Label>Nova Senha</Label>
               <Input
                 type="password"
@@ -165,7 +154,7 @@ export function AppHeader() {
             <Button variant="outline" onClick={() => setIsPwdOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handlePwdChange} disabled={!currentPwd || !newPwd || !confirmPwd}>
+            <Button onClick={handlePwdChange} disabled={!newPwd || !confirmPwd}>
               Salvar Senha
             </Button>
           </DialogFooter>

@@ -13,16 +13,29 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Package2, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase/client'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleReset = (e: React.FormEvent) => {
+  const handleReset = async (e: React.FormEvent) => {
     e.preventDefault()
     if (email) {
-      toast.success(`Um link de recuperação foi enviado para ${email}.`)
-      setTimeout(() => navigate('/login'), 2000)
+      setLoading(true)
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      })
+
+      setLoading(false)
+
+      if (error) {
+        toast.error(error.message || 'Erro ao enviar email.')
+      } else {
+        toast.success(`Um link de recuperação foi enviado para ${email}.`)
+        setTimeout(() => navigate('/login'), 2000)
+      }
     }
   }
 
@@ -57,8 +70,12 @@ export default function ForgotPassword() {
             </div>
           </CardContent>
           <CardFooter className="flex-col gap-4">
-            <Button type="submit" className="w-full h-11 text-base font-semibold shadow-sm">
-              Enviar Link de Recuperação
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 text-base font-semibold shadow-sm"
+            >
+              {loading ? 'Enviando...' : 'Enviar Link de Recuperação'}
             </Button>
             <div className="text-center w-full">
               <Button variant="ghost" asChild className="w-full h-11">
