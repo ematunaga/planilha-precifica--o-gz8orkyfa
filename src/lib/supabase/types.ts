@@ -9,7 +9,60 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          role: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          name?: string
+          role?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          role?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      user_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          role: string
+          status: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          role: string
+          status?: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          role?: string
+          status?: string
+          token?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -153,3 +206,68 @@ export const Constants = {
 // IMPORTANT: The TypeScript types above map UUID, TEXT, VARCHAR all to "string".
 // Use the COLUMN TYPES section below to know the real PostgreSQL type for each column.
 // Always use the correct PostgreSQL type when writing SQL migrations.
+
+// --- COLUMN TYPES (actual PostgreSQL types) ---
+// Use this to know the real database type when writing migrations.
+// "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: profiles
+//   id: uuid (not null)
+//   name: text (not null, default: ''::text)
+//   email: text (not null)
+//   role: text (not null, default: 'Viewer'::text)
+//   status: text (not null, default: 'Pending'::text)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: user_invitations
+//   id: uuid (not null, default: gen_random_uuid())
+//   email: text (not null)
+//   role: text (not null)
+//   token: uuid (not null, default: gen_random_uuid())
+//   status: text (not null, default: 'Pending'::text)
+//   created_at: timestamp with time zone (not null, default: now())
+
+// --- CONSTRAINTS ---
+// Table: profiles
+//   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+//   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
+// Table: user_invitations
+//   UNIQUE user_invitations_email_key: UNIQUE (email)
+//   PRIMARY KEY user_invitations_pkey: PRIMARY KEY (id)
+
+// --- ROW LEVEL SECURITY POLICIES ---
+// Table: profiles
+//   Policy "Profiles are viewable by everyone" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
+//   Policy "Profiles can be updated by everyone" (UPDATE, PERMISSIVE) roles={public}
+//     USING: true
+// Table: user_invitations
+//   Policy "Invitations are viewable by everyone" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
+//   Policy "Invitations can be inserted by everyone" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: true
+//   Policy "Invitations can be updated by everyone" (UPDATE, PERMISSIVE) roles={public}
+//     USING: true
+
+// --- DATABASE FUNCTIONS ---
+// FUNCTION handle_new_user()
+//   CREATE OR REPLACE FUNCTION public.handle_new_user()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     INSERT INTO public.profiles (id, email, name, role, status)
+//     VALUES (
+//       NEW.id,
+//       NEW.email,
+//       COALESCE(NEW.raw_user_meta_data->>'name', ''),
+//       COALESCE(NEW.raw_user_meta_data->>'role', 'Viewer'),
+//       COALESCE(NEW.raw_user_meta_data->>'status', 'Pending')
+//     );
+//     RETURN NEW;
+//   END;
+//   $function$
+//
+
+// --- INDEXES ---
+// Table: user_invitations
+//   CREATE UNIQUE INDEX user_invitations_email_key ON public.user_invitations USING btree (email)

@@ -39,7 +39,7 @@ export default function Users() {
   const [loading, setLoading] = useState(true)
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState('Viewer')
+  const [inviteRole, setInviteRole] = useState('Visualizador')
   const [inviting, setInviting] = useState(false)
 
   const loadData = async () => {
@@ -141,7 +141,7 @@ export default function Users() {
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
                       <TableCell>
                         <Select
-                          value={user.role}
+                          value={user.role === 'Viewer' ? 'Visualizador' : user.role}
                           onValueChange={(val) => handleUpdateStatus(user.id, val, user.status)}
                           disabled={user.id === profile.id}
                         >
@@ -151,7 +151,7 @@ export default function Users() {
                           <SelectContent>
                             <SelectItem value="Admin">Administrador</SelectItem>
                             <SelectItem value="Editor">Editor</SelectItem>
-                            <SelectItem value="Viewer">Visualizador</SelectItem>
+                            <SelectItem value="Visualizador">Visualizador</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
@@ -233,7 +233,7 @@ export default function Users() {
                   invitations.map((inv) => (
                     <TableRow key={inv.id}>
                       <TableCell className="font-medium">{inv.email}</TableCell>
-                      <TableCell>{inv.role}</TableCell>
+                      <TableCell>{inv.role === 'Viewer' ? 'Visualizador' : inv.role}</TableCell>
                       <TableCell>
                         <Badge variant={inv.status === 'Accepted' ? 'default' : 'secondary'}>
                           {inv.status === 'Accepted' ? 'Aceito' : 'Pendente'}
@@ -276,7 +276,7 @@ export default function Users() {
                 <SelectContent>
                   <SelectItem value="Admin">Administrador</SelectItem>
                   <SelectItem value="Editor">Editor</SelectItem>
-                  <SelectItem value="Viewer">Visualizador</SelectItem>
+                  <SelectItem value="Visualizador">Visualizador</SelectItem>
                 </SelectContent>
               </Select>
             </div>

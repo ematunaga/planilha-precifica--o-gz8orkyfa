@@ -55,7 +55,7 @@ export default function Register() {
       return
     }
 
-    const role = invitation ? invitation.role : 'Viewer'
+    const role = invitation ? invitation.role : 'Visualizador'
     const status = invitation ? 'Authorized' : 'Pending'
 
     const { error } = await signUp(email, password, { name, role, status })
