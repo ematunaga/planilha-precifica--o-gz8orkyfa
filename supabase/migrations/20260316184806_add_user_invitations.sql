@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS public.user_invitations (
 
 -- Trigger to create profile
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $
+RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, name, role, status)
   VALUES (
@@ -30,7 +30,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -103,4 +103,3 @@ CREATE POLICY "Invitations can be inserted by everyone" ON public.user_invitatio
 
 DROP POLICY IF EXISTS "Invitations can be updated by everyone" ON public.user_invitations;
 CREATE POLICY "Invitations can be updated by everyone" ON public.user_invitations FOR UPDATE USING (true);
-
