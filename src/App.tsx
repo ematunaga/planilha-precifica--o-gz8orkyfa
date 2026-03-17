@@ -81,7 +81,7 @@ const AppRoutes = () => {
         <Route path="/precificacao" element={<Pricing />} />
         <Route path="/simulador" element={<Simulador />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
-        <Route path="/usuarios" element={<Users />} />
+        <Route path="/users" element={<Users />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
