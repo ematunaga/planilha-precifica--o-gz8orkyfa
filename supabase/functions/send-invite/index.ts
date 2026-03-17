@@ -13,13 +13,16 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { email, role, token } = await req.json()
+    const { email, role, token, origin } = await req.json()
+
+    const platformUrl =
+      origin || req.headers.get('origin') || 'https://leapit-precificacao.goskip.app'
 
     // In a real app, integrate an email provider like Resend or SendGrid here
     console.log(`[SIMULATED EMAIL] To: ${email}`)
     console.log(`[SIMULATED EMAIL] Subject: Convite para o Sistema de Precificação`)
     console.log(
-      `[SIMULATED EMAIL] Body: Você foi convidado para participar como ${role}. Acesse para registrar sua conta: ${req.headers.get('origin') || 'https://leapit-precificacao.goskip.app'}/register?token=${token}`,
+      `[SIMULATED EMAIL] Body: Você foi convidado para participar como ${role}. Acesse para registrar sua conta: ${platformUrl}/register?token=${token}`,
     )
 
     return new Response(

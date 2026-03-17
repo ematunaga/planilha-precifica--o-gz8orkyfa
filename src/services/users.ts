@@ -23,17 +23,27 @@ export async function updateUserRoleAndStatus(id: string, role: string, status: 
   if (error) throw error
 }
 
-export async function inviteUser(email: string, role: string) {
+export async function inviteUser(email: string, role: string, origin: string) {
   const { data, error } = await supabase
     .from('user_invitations')
     .insert({ email, role })
     .select('token')
     .single()
-  if (error) throw error
 
-  await supabase.functions.invoke('send-invite', {
-    body: { email, role, token: data.token },
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('Este e-mail já possui um convite pendente ou ativo.')
+    }
+    throw new Error(error.message)
+  }
+
+  const { error: invokeError } = await supabase.functions.invoke('send-invite', {
+    body: { email, role, token: data.token, origin },
   })
+
+  if (invokeError) {
+    throw new Error('Erro ao enviar o e-mail de convite pela Edge Function.')
+  }
 
   return data
 }

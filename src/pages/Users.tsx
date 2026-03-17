@@ -30,10 +30,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { toast } from 'sonner'
+import { useToast } from '@/hooks/use-toast'
 
 export default function Users() {
   const { profile } = useAuth()
+  const { toast } = useToast()
   const [users, setUsers] = useState<any[]>([])
   const [invitations, setInvitations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -48,7 +49,7 @@ export default function Users() {
       setUsers(u)
       setInvitations(i)
     } catch (e) {
-      toast.error('Erro ao carregar dados.')
+      toast({ title: 'Erro', description: 'Erro ao carregar dados.', variant: 'destructive' })
     } finally {
       setLoading(false)
     }
@@ -65,10 +66,10 @@ export default function Users() {
   const handleUpdateStatus = async (id: string, role: string, status: string) => {
     try {
       await updateUserRoleAndStatus(id, role, status)
-      toast.success('Usuário atualizado com sucesso.')
+      toast({ title: 'Sucesso', description: 'Usuário atualizado com sucesso.' })
       loadData()
     } catch (e) {
-      toast.error('Erro ao atualizar usuário.')
+      toast({ title: 'Erro', description: 'Erro ao atualizar usuário.', variant: 'destructive' })
     }
   }
 
@@ -76,13 +77,17 @@ export default function Users() {
     if (!inviteEmail) return
     setInviting(true)
     try {
-      await inviteUser(inviteEmail, inviteRole)
-      toast.success('Convite enviado com sucesso!')
+      await inviteUser(inviteEmail, inviteRole, window.location.origin)
+      toast({ title: 'Sucesso', description: 'Convite enviado com sucesso!' })
       setIsInviteOpen(false)
       setInviteEmail('')
       loadData()
     } catch (e: any) {
-      toast.error(e.message || 'Erro ao enviar convite. O e-mail pode já estar convidado.')
+      toast({
+        title: 'Erro',
+        description: e.message || 'Erro ao enviar convite.',
+        variant: 'destructive',
+      })
     } finally {
       setInviting(false)
     }
