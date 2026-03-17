@@ -240,11 +240,11 @@ export const Constants = {
 //   Policy "Profiles can be updated by everyone" (UPDATE, PERMISSIVE) roles={public}
 //     USING: true
 // Table: user_invitations
-//   Policy "Invitations are viewable by everyone" (SELECT, PERMISSIVE) roles={public}
+//   Policy "Invitations are viewable by authenticated users" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
-//   Policy "Invitations can be inserted by everyone" (INSERT, PERMISSIVE) roles={public}
+//   Policy "Invitations can be inserted by authenticated users" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: true
-//   Policy "Invitations can be updated by everyone" (UPDATE, PERMISSIVE) roles={public}
+//   Policy "Invitations can be updated by authenticated users" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: true
 
 // --- DATABASE FUNCTIONS ---

@@ -48,6 +48,21 @@ export async function inviteUser(email: string, role: string, origin: string) {
   return data
 }
 
+export async function deleteInvitation(id: string) {
+  const { error } = await supabase.from('user_invitations').delete().eq('id', id)
+  if (error) throw new Error('Erro ao excluir convite.')
+}
+
+export async function resendInvitation(email: string, role: string, token: string, origin: string) {
+  const { error: invokeError } = await supabase.functions.invoke('send-invite', {
+    body: { email, role, token, origin },
+  })
+
+  if (invokeError) {
+    throw new Error('Erro ao reenviar o e-mail de convite.')
+  }
+}
+
 export async function checkInvitation(token: string) {
   const { data } = await supabase
     .from('user_invitations')

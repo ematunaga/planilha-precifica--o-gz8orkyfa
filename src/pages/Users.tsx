@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { ShieldCheck, UserX, MailPlus } from 'lucide-react'
+import { ShieldCheck, UserX, MailPlus, Send, Trash2, Loader2 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
-import { fetchUsers, fetchInvitations, updateUserRoleAndStatus, inviteUser } from '@/services/users'
+import {
+  fetchUsers,
+  fetchInvitations,
+  updateUserRoleAndStatus,
+  inviteUser,
+  deleteInvitation,
+  resendInvitation,
+} from '@/services/users'
 import {
   Table,
   TableBody,
@@ -38,10 +45,15 @@ export default function Users() {
   const [users, setUsers] = useState<any[]>([])
   const [invitations, setInvitations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('Visualizador')
   const [inviting, setInviting] = useState(false)
+
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [invitationToDelete, setInvitationToDelete] = useState<any>(null)
 
   const loadData = async () => {
     try {
@@ -90,6 +102,42 @@ export default function Users() {
       })
     } finally {
       setInviting(false)
+    }
+  }
+
+  const handleResend = async (inv: any) => {
+    setActionLoadingId(inv.id)
+    try {
+      await resendInvitation(inv.email, inv.role, inv.token, window.location.origin)
+      toast({ title: 'Sucesso', description: `Convite reenviado com sucesso para ${inv.email}.` })
+    } catch (e: any) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao reenviar convite. Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!invitationToDelete) return
+    setActionLoadingId(invitationToDelete.id)
+    try {
+      await deleteInvitation(invitationToDelete.id)
+      toast({ title: 'Sucesso', description: 'Convite excluído com sucesso.' })
+      loadData()
+    } catch (e: any) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir o convite.',
+        variant: 'destructive',
+      })
+    } finally {
+      setActionLoadingId(null)
+      setDeleteDialogOpen(false)
+      setInvitationToDelete(null)
     }
   }
 
@@ -225,12 +273,13 @@ export default function Users() {
                   <TableHead>Perfil Solicitado</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Enviado em</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {invitations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                       Nenhum convite enviado.
                     </TableCell>
                   </TableRow>
@@ -246,6 +295,39 @@ export default function Users() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(inv.created_at).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {inv.status === 'Pending' && (
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8"
+                              onClick={() => handleResend(inv)}
+                              disabled={actionLoadingId === inv.id}
+                            >
+                              {actionLoadingId === inv.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin sm:mr-2" />
+                              ) : (
+                                <Send className="h-4 w-4 sm:mr-2" />
+                              )}
+                              <span className="hidden sm:inline">Reenviar</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => {
+                                setInvitationToDelete(inv)
+                                setDeleteDialogOpen(true)
+                              }}
+                              disabled={actionLoadingId === inv.id}
+                            >
+                              <Trash2 className="h-4 w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Excluir</span>
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -292,6 +374,37 @@ export default function Users() {
             </Button>
             <Button onClick={handleInvite} disabled={!inviteEmail || inviting}>
               {inviting ? 'Enviando...' : 'Enviar Convite'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Convite</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-sm text-muted-foreground">
+            Tem certeza que deseja excluir o convite para{' '}
+            <strong className="text-foreground">{invitationToDelete?.email}</strong>? Esta ação não
+            pode ser desfeita e o link enviado não funcionará mais.
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={!!actionLoadingId}
+            >
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={!!actionLoadingId}>
+              {actionLoadingId ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Excluindo...
+                </>
+              ) : (
+                'Excluir Convite'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
