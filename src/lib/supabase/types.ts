@@ -260,7 +260,7 @@ export const Constants = {
 //       NEW.id,
 //       NEW.email,
 //       COALESCE(NEW.raw_user_meta_data->>'name', ''),
-//       COALESCE(NEW.raw_user_meta_data->>'role', 'Viewer'),
+//       COALESCE(NEW.raw_user_meta_data->>'role', 'Visualizador'),
 //       COALESCE(NEW.raw_user_meta_data->>'status', 'Pending')
 //     );
 //     RETURN NEW;

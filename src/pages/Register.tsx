@@ -1,162 +1,155 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   CardDescription,
   CardFooter,
+  CardHeader,
+  CardTitle,
 } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { Package2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useAuth } from '@/hooks/use-auth'
-import { checkInvitation, acceptInvitation } from '@/services/users'
+import logo from '@/assets/leap-it-logo-novo_trasp_s_slogan-b19c4.png'
+import { Loader2 } from 'lucide-react'
 
 export default function Register() {
-  const [searchParams] = useSearchParams()
-  const token = searchParams.get('token')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [invitation, setInvitation] = useState<any>(null)
-
-  const navigate = useNavigate()
+  const [isLoading, setIsLoading] = useState(false)
   const { signUp } = useAuth()
-
-  useEffect(() => {
-    if (token) {
-      checkInvitation(token).then((data) => {
-        if (data && data.status === 'Pending') {
-          setInvitation(data)
-          setEmail(data.email)
-          toast.success(`Convite identificado para ${data.email}!`)
-        } else {
-          toast.error('Convite inválido ou já utilizado.')
-        }
-      })
-    }
-  }, [token])
+  const navigate = useNavigate()
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!email.includes('@')) {
-      toast.error('Por favor, insira um email válido.')
-      return
-    }
-
     if (password !== confirmPassword) {
-      toast.error('As senhas não coincidem.')
+      toast.error('As senhas não coincidem')
       return
     }
 
-    const role = invitation ? invitation.role : 'Visualizador'
-    const status = invitation ? 'Authorized' : 'Pending'
+    setIsLoading(true)
 
-    const { error } = await signUp(email, password, { name, role, status })
-
-    if (error) {
-      toast.error(error.message || 'Erro ao criar conta.')
-    } else {
-      if (invitation) {
-        await acceptInvitation(token!)
-      }
-      toast.success(
-        invitation
-          ? 'Conta criada e autorizada com sucesso!'
-          : 'Conta criada! Aguarde a autorização de um administrador.',
-      )
+    try {
+      const { error } = await signUp(email, password)
+      if (error) throw error
+      toast.success('Conta criada com sucesso! Verifique seu e-mail.')
       navigate('/login')
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao criar conta')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-background p-4 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent dark:from-primary/10 -z-10" />
-      <Card className="w-full max-w-md shadow-xl border-primary/10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <CardHeader className="space-y-2 text-center pb-6">
-          <div className="flex justify-center mb-2">
-            <div className="flex aspect-square size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-              <Package2 className="size-7" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Criar Nova Conta</CardTitle>
-          <CardDescription>
-            {invitation
-              ? 'Complete seu cadastro a partir do convite.'
-              : 'Cadastre-se para começar a precificar.'}
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleRegister}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome Completo</Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="João da Silva"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="h-11"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="joao@empresa.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={!!invitation}
-                className="h-11"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-11"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="h-11"
-              />
-            </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-muted/40 p-4 md:p-8">
+      <div className="w-full max-w-[400px] flex flex-col items-center space-y-6 animate-fade-in-up">
+        <Link
+          to="/"
+          className="transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md p-2"
+        >
+          <img
+            src={logo}
+            alt="Leap IT Logo"
+            className="h-16 md:h-20 w-auto object-contain drop-shadow-sm"
+          />
+        </Link>
+
+        <Card className="w-full shadow-lg border-border/50">
+          <CardHeader className="space-y-2 text-center pb-6">
+            <CardTitle className="text-2xl font-bold tracking-tight">Criar Conta</CardTitle>
+            <CardDescription className="text-base">
+              Preencha os dados abaixo para se cadastrar
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome completo</Label>
+                <Input
+                  id="name"
+                  placeholder="Seu nome"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nome@exemplo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="h-11"
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full h-11 text-base font-medium mt-2"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Cadastrando...
+                  </>
+                ) : (
+                  'Cadastrar'
+                )}
+              </Button>
+            </form>
           </CardContent>
-          <CardFooter className="flex-col gap-4">
-            <Button type="submit" className="w-full h-11 text-base font-semibold shadow-sm">
-              Criar Conta
-            </Button>
-            <div className="text-center text-sm">
+          <CardFooter className="flex flex-col space-y-4 text-center text-sm text-muted-foreground border-t bg-muted/20 p-6">
+            <div>
               Já tem uma conta?{' '}
-              <Link to="/login" className="font-semibold text-primary hover:underline">
-                Fazer Login
+              <Link
+                to="/login"
+                className="font-semibold text-primary hover:underline transition-colors"
+              >
+                Faça login
               </Link>
             </div>
           </CardFooter>
-        </form>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }

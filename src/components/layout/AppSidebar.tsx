@@ -1,72 +1,47 @@
 import { Link, useLocation } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  Calculator,
-  Settings,
-  Package2,
-  FolderOpen,
-  Table2,
-  Users,
-} from 'lucide-react'
+import { LayoutDashboard, FolderKanban, Calculator, Users, Settings } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { useMainStore } from '@/stores/main'
-import { useAuth } from '@/hooks/use-auth'
+
+const navItems = [
+  { title: 'Dashboard', icon: LayoutDashboard, url: '/' },
+  { title: 'Projetos', icon: FolderKanban, url: '/projetos' },
+  { title: 'Simulador', icon: Calculator, url: '/simulador' },
+  { title: 'Usuários', icon: Users, url: '/users' },
+  { title: 'Configurações', icon: Settings, url: '/configuracoes' },
+]
 
 export function AppSidebar() {
   const location = useLocation()
-  const { activeProjectId } = useMainStore()
-  const { profile } = useAuth()
-
-  const navItems = [
-    { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-    { title: 'Meus Projetos', url: '/projetos', icon: FolderOpen },
-    ...(activeProjectId
-      ? [{ title: 'Precificação Atual', url: '/precificacao', icon: Table2 }]
-      : []),
-    { title: 'Simulador', url: '/simulador', icon: Calculator },
-    ...(profile?.role === 'Admin'
-      ? [{ title: 'Configurações', url: '/configuracoes', icon: Settings }]
-      : []),
-    ...(profile?.role === 'Admin'
-      ? [{ title: 'Gestão de Usuários', url: '/usuarios', icon: Users }]
-      : []),
-  ]
 
   return (
-    <Sidebar className="border-r border-border/50">
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-2 font-semibold text-primary">
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <Package2 className="size-4" />
-          </div>
-          <span className="truncate">Precificação Inteligente</span>
-        </div>
-      </SidebarHeader>
+    <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
+          <SidebarGroupContent className="pt-4">
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.url}>
-                    <Link to={item.url}>
-                      <item.icon className="size-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {navItems.map((item) => {
+                const isActive =
+                  location.pathname === item.url ||
+                  (item.url !== '/' && location.pathname.startsWith(item.url))
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                      <Link to={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
