@@ -109,7 +109,10 @@ export default function Users() {
   }
 
   const handleInvite = async () => {
-    if (!inviteEmail) return
+    if (!inviteEmail) {
+      toast({ title: 'Atenção', description: 'O e-mail é obrigatório.', variant: 'destructive' })
+      return
+    }
     setInviting(true)
     try {
       await inviteUser(inviteEmail, inviteRole, window.location.origin)
@@ -156,10 +159,11 @@ export default function Users() {
     try {
       await resendInvitation(inv.email, inv.role, inv.token, window.location.origin)
       toast({ title: 'Sucesso', description: `Convite reenviado com sucesso para ${inv.email}.` })
+      loadData()
     } catch (e: any) {
       toast({
         title: 'Erro',
-        description: 'Erro ao reenviar convite. Tente novamente.',
+        description: e.message || 'Erro ao reenviar convite. Tente novamente.',
         variant: 'destructive',
       })
     } finally {
@@ -272,7 +276,7 @@ export default function Users() {
                         <Select
                           value={user.role === 'Viewer' ? 'Visualizador' : user.role}
                           onValueChange={(val) => handleUpdateStatus(user.id, val, user.status)}
-                          disabled={user.id === profile.id}
+                          disabled={user.id === profile?.id}
                         >
                           <SelectTrigger className="w-[140px] h-8">
                             <SelectValue />
@@ -307,7 +311,7 @@ export default function Users() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        {user.id !== profile.id && (
+                        {user.id !== profile?.id && (
                           <div className="flex justify-end gap-2">
                             {user.status !== 'Authorized' && (
                               <Button
@@ -359,7 +363,7 @@ export default function Users() {
                   <TableHead>Email</TableHead>
                   <TableHead>Perfil Solicitado</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Enviado em</TableHead>
+                  <TableHead>Último Envio</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>

@@ -24,9 +24,14 @@ export async function updateUserRoleAndStatus(id: string, role: string, status: 
 }
 
 export async function inviteUser(email: string, role: string, origin: string) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) {
+    throw new Error('Endereço de e-mail inválido.')
+  }
+
   const { data, error } = await supabase
     .from('user_invitations')
-    .insert({ email, role })
+    .insert({ email, role, status: 'Pending' })
     .select('token')
     .single()
 
@@ -37,12 +42,16 @@ export async function inviteUser(email: string, role: string, origin: string) {
     throw new Error(error.message)
   }
 
-  const { error: invokeError } = await supabase.functions.invoke('send-invite', {
+  const { data: invokeData, error: invokeError } = await supabase.functions.invoke('send-invite', {
     body: { email, role, token: data.token, origin },
   })
 
   if (invokeError) {
-    throw new Error('Erro ao enviar o e-mail de convite pela Edge Function.')
+    throw new Error('Erro de comunicação com o serviço de envio de e-mails.')
+  }
+
+  if (invokeData?.error) {
+    throw new Error(invokeData.error)
   }
 
   return data
@@ -54,12 +63,26 @@ export async function deleteInvitation(id: string) {
 }
 
 export async function resendInvitation(email: string, role: string, token: string, origin: string) {
-  const { error: invokeError } = await supabase.functions.invoke('send-invite', {
+  // Atualiza o timestamp para refletir o momento do reenvio
+  const { error: updateError } = await supabase
+    .from('user_invitations')
+    .update({ created_at: new Date().toISOString() })
+    .eq('token', token)
+
+  if (updateError) {
+    throw new Error('Erro ao atualizar registro do convite.')
+  }
+
+  const { data: invokeData, error: invokeError } = await supabase.functions.invoke('send-invite', {
     body: { email, role, token, origin },
   })
 
   if (invokeError) {
-    throw new Error('Erro ao reenviar o e-mail de convite.')
+    throw new Error('Erro de comunicação com o serviço de envio de e-mails.')
+  }
+
+  if (invokeData?.error) {
+    throw new Error(invokeData.error)
   }
 }
 

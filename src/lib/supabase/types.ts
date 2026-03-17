@@ -235,6 +235,8 @@ export const Constants = {
 
 // --- ROW LEVEL SECURITY POLICIES ---
 // Table: profiles
+//   Policy "Admins can delete profiles" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: (( SELECT profiles_1.role    FROM profiles profiles_1   WHERE (profiles_1.id = auth.uid())) = 'Admin'::text)
 //   Policy "Profiles are viewable by everyone" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 //   Policy "Profiles can be updated by everyone" (UPDATE, PERMISSIVE) roles={public}
