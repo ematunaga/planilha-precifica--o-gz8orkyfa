@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { ShieldCheck, UserX, MailPlus, Send, Trash2, Loader2 } from 'lucide-react'
+import { ShieldCheck, UserX, MailPlus, Send, Trash2, Loader2, UserPlus } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import {
   fetchUsers,
@@ -9,6 +9,8 @@ import {
   inviteUser,
   deleteInvitation,
   resendInvitation,
+  directCreateUser,
+  directDeleteUser,
 } from '@/services/users'
 import {
   Table,
@@ -34,6 +36,15 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -51,9 +62,21 @@ export default function Users() {
   const [inviteRole, setInviteRole] = useState('Visualizador')
   const [inviting, setInviting] = useState(false)
 
+  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false)
+  const [newUserName, setNewUserName] = useState('')
+  const [newUserEmail, setNewUserEmail] = useState('')
+  const [newUserPassword, setNewUserPassword] = useState('')
+  const [newUserRole, setNewUserRole] = useState('Visualizador')
+  const [creatingUser, setCreatingUser] = useState(false)
+
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [invitationToDelete, setInvitationToDelete] = useState<any>(null)
+
+  const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false)
+  const [userToDeleteId, setUserToDeleteId] = useState<string | null>(null)
+  const [deletingUser, setDeletingUser] = useState(false)
 
   const loadData = async () => {
     try {
@@ -105,6 +128,29 @@ export default function Users() {
     }
   }
 
+  const handleCreateUser = async () => {
+    if (!newUserName || !newUserEmail || newUserPassword.length < 6) return
+    setCreatingUser(true)
+    try {
+      await directCreateUser(newUserEmail, newUserPassword, newUserName, newUserRole)
+      toast({ title: 'Sucesso', description: 'Usuário criado com sucesso!' })
+      setIsCreateUserOpen(false)
+      setNewUserName('')
+      setNewUserEmail('')
+      setNewUserPassword('')
+      setNewUserRole('Visualizador')
+      loadData()
+    } catch (e: any) {
+      toast({
+        title: 'Erro',
+        description: e.message || 'Erro ao criar usuário.',
+        variant: 'destructive',
+      })
+    } finally {
+      setCreatingUser(false)
+    }
+  }
+
   const handleResend = async (inv: any) => {
     setActionLoadingId(inv.id)
     try {
@@ -121,7 +167,7 @@ export default function Users() {
     }
   }
 
-  const confirmDelete = async () => {
+  const confirmDeleteInvitation = async () => {
     if (!invitationToDelete) return
     setActionLoadingId(invitationToDelete.id)
     try {
@@ -141,6 +187,26 @@ export default function Users() {
     }
   }
 
+  const handleDeleteUser = async () => {
+    if (!userToDeleteId) return
+    setDeletingUser(true)
+    try {
+      await directDeleteUser(userToDeleteId)
+      toast({ title: 'Sucesso', description: 'Usuário excluído com sucesso.' })
+      setDeleteUserDialogOpen(false)
+      setUserToDeleteId(null)
+      loadData()
+    } catch (e: any) {
+      toast({
+        title: 'Erro',
+        description: e.message || 'Não foi possível excluir o usuário.',
+        variant: 'destructive',
+      })
+    } finally {
+      setDeletingUser(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full w-full">
       <div>
@@ -156,10 +222,20 @@ export default function Users() {
             <TabsTrigger value="users">Usuários Registrados</TabsTrigger>
             <TabsTrigger value="invitations">Convites Enviados</TabsTrigger>
           </TabsList>
-          <Button onClick={() => setIsInviteOpen(true)} className="shadow-sm">
-            <MailPlus className="w-4 h-4 mr-2" />
-            Convidar Usuário
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto overflow-x-auto">
+            <Button
+              onClick={() => setIsCreateUserOpen(true)}
+              variant="outline"
+              className="shadow-sm whitespace-nowrap"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Novo Usuário
+            </Button>
+            <Button onClick={() => setIsInviteOpen(true)} className="shadow-sm whitespace-nowrap">
+              <MailPlus className="w-4 h-4 mr-2" />
+              Convidar Usuário
+            </Button>
+          </div>
         </div>
 
         <TabsContent value="users">
@@ -253,6 +329,17 @@ export default function Users() {
                                 <UserX className="h-4 w-4 mr-1" /> Revogar
                               </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => {
+                                setUserToDeleteId(user.id)
+                                setDeleteUserDialogOpen(true)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         )}
                       </TableCell>
@@ -338,6 +425,79 @@ export default function Users() {
         </TabsContent>
       </Tabs>
 
+      <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Novo Usuário</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome Completo</Label>
+              <Input
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+                placeholder="João da Silva"
+                disabled={creatingUser}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+                placeholder="email@empresa.com"
+                disabled={creatingUser}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Senha</Label>
+              <Input
+                type="password"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                disabled={creatingUser}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Perfil de Acesso</Label>
+              <Select value={newUserRole} onValueChange={setNewUserRole} disabled={creatingUser}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Admin">Administrador</SelectItem>
+                  <SelectItem value="Editor">Editor</SelectItem>
+                  <SelectItem value="Visualizador">Visualizador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateUserOpen(false)}
+              disabled={creatingUser}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreateUser}
+              disabled={!newUserName || !newUserEmail || newUserPassword.length < 6 || creatingUser}
+            >
+              {creatingUser ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Criando...
+                </>
+              ) : (
+                'Criar Usuário'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
         <DialogContent>
           <DialogHeader>
@@ -373,7 +533,13 @@ export default function Users() {
               Cancelar
             </Button>
             <Button onClick={handleInvite} disabled={!inviteEmail || inviting}>
-              {inviting ? 'Enviando...' : 'Enviar Convite'}
+              {inviting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...
+                </>
+              ) : (
+                'Enviar Convite'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -397,7 +563,11 @@ export default function Users() {
             >
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={confirmDelete} disabled={!!actionLoadingId}>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteInvitation}
+              disabled={!!actionLoadingId}
+            >
               {actionLoadingId ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Excluindo...
@@ -409,6 +579,29 @@ export default function Users() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteUserDialogOpen} onOpenChange={setDeleteUserDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Usuário</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingUser}>Cancelar</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleDeleteUser} disabled={deletingUser}>
+              {deletingUser ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Excluindo...
+                </>
+              ) : (
+                'Confirmar Exclusão'
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

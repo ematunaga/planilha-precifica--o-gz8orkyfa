@@ -1,5 +1,7 @@
 {
   "_versions": {
-    "send-invite": 2
+    "send-invite": 2,
+    "create-user-admin": 1,
+    "delete-user-admin": 1
   }
 }

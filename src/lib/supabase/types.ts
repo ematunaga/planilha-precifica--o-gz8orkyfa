@@ -242,6 +242,8 @@ export const Constants = {
 // Table: user_invitations
 //   Policy "Invitations are viewable by authenticated users" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
+//   Policy "Invitations can be deleted by authenticated users" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: true
 //   Policy "Invitations can be inserted by authenticated users" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: true
 //   Policy "Invitations can be updated by authenticated users" (UPDATE, PERMISSIVE) roles={authenticated}

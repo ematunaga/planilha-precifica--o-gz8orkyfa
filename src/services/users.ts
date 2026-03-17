@@ -75,3 +75,48 @@ export async function checkInvitation(token: string) {
 export async function acceptInvitation(token: string) {
   await supabase.from('user_invitations').update({ status: 'Accepted' }).eq('token', token)
 }
+
+export async function directCreateUser(
+  email: string,
+  password: string,
+  name: string,
+  role: string,
+) {
+  const { data, error } = await supabase.functions.invoke('create-user-admin', {
+    body: { email, password, name, role },
+  })
+
+  if (error) {
+    throw new Error('Erro de comunicação com o servidor.')
+  }
+
+  if (data?.error) {
+    if (
+      data.error.includes('already registered') ||
+      data.error.includes('already been registered') ||
+      data.error.includes('Email exists') ||
+      data.error.includes('duplicate')
+    ) {
+      throw new Error('Este e-mail já está em uso.')
+    }
+    throw new Error(data.error)
+  }
+
+  return data
+}
+
+export async function directDeleteUser(userId: string) {
+  const { data, error } = await supabase.functions.invoke('delete-user-admin', {
+    body: { userId },
+  })
+
+  if (error) {
+    throw new Error('Erro de comunicação com o servidor.')
+  }
+
+  if (data?.error) {
+    throw new Error(data.error)
+  }
+
+  return data
+}
