@@ -1,8 +1,14 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-import { corsHeaders } from '../_shared/cors.ts'
 import * as XLSX from 'npm:xlsx@0.18.5'
 import { Buffer } from 'node:buffer'
 import pdf from 'npm:pdf-parse@1.1.1'
+
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -27,17 +33,17 @@ Deno.serve(async (req: Request) => {
       const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as any[][]
 
       if (json.length > 0) {
-        headers = (json[0] || []).map((h) => String(h).trim())
+        headers = (json[0] || []).map((h: any) => String(h).trim())
         rows = json
           .slice(1)
-          .map((row) => {
+          .map((row: any) => {
             const normalizedRow = new Array(headers.length).fill('')
-            row.forEach((cell, i) => {
+            row.forEach((cell: any, i: number) => {
               if (i < headers.length) normalizedRow[i] = String(cell).trim()
             })
             return normalizedRow
           })
-          .filter((row) => row.some((cell) => cell !== ''))
+          .filter((row: any) => row.some((cell: any) => cell !== ''))
       }
     } else if (fileName.endsWith('.pdf')) {
       const pdfData = await pdf(Buffer.from(arrayBuffer))
@@ -50,20 +56,20 @@ Deno.serve(async (req: Request) => {
         const splitLine = (line: string) =>
           line
             .split(/\s{2,}|\t/)
-            .map((c) => c.trim())
-            .filter((c) => c)
+            .map((c: string) => c.trim())
+            .filter((c: string) => c)
         headers = splitLine(lines[0])
         rows = lines
           .slice(1)
-          .map((l) => {
+          .map((l: string) => {
             const cols = splitLine(l)
             const normalized = new Array(headers.length).fill('')
-            cols.forEach((c, i) => {
+            cols.forEach((c: string, i: number) => {
               if (i < headers.length) normalized[i] = c
             })
             return normalized
           })
-          .filter((row) => row.some((cell) => cell !== ''))
+          .filter((row: string[]) => row.some((cell: string) => cell !== ''))
       }
     } else {
       const text = new TextDecoder().decode(arrayBuffer)
