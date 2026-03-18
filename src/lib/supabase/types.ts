@@ -9,6 +9,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      pricing_items: {
+        Row: {
+          cofins: number | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          description: string | null
+          difal: number | null
+          id: string
+          part_number: string
+          pis: number | null
+          quantity: number | null
+          type: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          cofins?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          difal?: number | null
+          id?: string
+          part_number: string
+          pis?: number | null
+          quantity?: number | null
+          type?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          cofins?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          difal?: number | null
+          id?: string
+          part_number?: string
+          pis?: number | null
+          quantity?: number | null
+          type?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -210,6 +255,19 @@ export const Constants = {
 // --- COLUMN TYPES (actual PostgreSQL types) ---
 // Use this to know the real database type when writing migrations.
 // "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: pricing_items
+//   id: uuid (not null, default: gen_random_uuid())
+//   part_number: text (not null)
+//   description: text (nullable)
+//   type: text (nullable)
+//   currency: text (nullable)
+//   quantity: numeric (nullable)
+//   unit_cost: numeric (nullable)
+//   pis: numeric (nullable)
+//   cofins: numeric (nullable)
+//   difal: numeric (nullable)
+//   created_by: uuid (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: profiles
 //   id: uuid (not null)
 //   name: text (not null, default: ''::text)
@@ -226,6 +284,9 @@ export const Constants = {
 //   created_at: timestamp with time zone (not null, default: now())
 
 // --- CONSTRAINTS ---
+// Table: pricing_items
+//   FOREIGN KEY pricing_items_created_by_fkey: FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL
+//   PRIMARY KEY pricing_items_pkey: PRIMARY KEY (id)
 // Table: profiles
 //   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
@@ -234,6 +295,15 @@ export const Constants = {
 //   PRIMARY KEY user_invitations_pkey: PRIMARY KEY (id)
 
 // --- ROW LEVEL SECURITY POLICIES ---
+// Table: pricing_items
+//   Policy "authenticated_delete" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "authenticated_insert" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: true
+//   Policy "authenticated_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "authenticated_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: true
 // Table: profiles
 //   Policy "Admins can delete profiles" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: (( SELECT profiles_1.role    FROM profiles profiles_1   WHERE (profiles_1.id = auth.uid())) = 'Admin'::text)
