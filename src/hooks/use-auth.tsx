@@ -40,15 +40,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (!session?.user) setLoading(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.warn('Auth session initialization error:', error.message)
+          // Gracefully intercept invalid/missing refresh token errors
+          if (
+            error.message.includes('Refresh Token Not Found') ||
+            error.message.includes('Invalid Refresh Token')
+          ) {
+            // Programmatically force a clean sign out to purge stale local storage
+            supabase.auth.signOut().catch((signOutErr) => {
+              console.warn('Silent sign-out cleanup failed:', signOutErr.message)
+            })
+          }
+        }
+        setSession(session)
+        setUser(session?.user ?? null)
+        if (!session?.user) {
+          setLoading(false)
+        }
+      })
+      .catch((err) => {
+        // Fallback for unhandled promise rejections during session fetch
+        console.error('Unhandled session retrieval exception:', err)
+        setLoading(false)
+      })
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setProfile(null)
+      }
       setSession(session)
       setUser(session?.user ?? null)
       if (!session?.user) {
@@ -56,6 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false)
       }
     })
+
     return () => subscription.unsubscribe()
   }, [])
 
@@ -66,8 +92,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select('*')
         .eq('id', user.id)
         .single()
-        .then(({ data }) => {
+        .then(({ data, error }) => {
+          if (error) {
+            console.warn('Profile fetch warning:', error.message)
+          }
           if (data) setProfile(data as Profile)
+          setLoading(false)
+        })
+        .catch((err) => {
+          console.error('Profile fetch exception:', err)
           setLoading(false)
         })
     }
