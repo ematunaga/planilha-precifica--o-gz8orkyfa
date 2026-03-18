@@ -105,7 +105,7 @@ export default function Pricing() {
       products.length > 0
         ? { taxRates: products[0].taxRates, encargoRates: products[0].encargoRates }
         : {
-            taxRates: { icms: 0, ipi: 0, pisCofins: 9.25, iss: 0 },
+            taxRates: { icms: 0, ipi: 0, pis: 1.65, cofins: 7.6, iss: 0 },
             encargoRates: { nf: 2, admin: 5, comissao: 3 },
           }
 

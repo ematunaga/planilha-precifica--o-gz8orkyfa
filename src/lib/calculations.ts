@@ -2,12 +2,13 @@ import { Product, FinancialResult } from '@/types'
 
 export function calculateFinancials(product: Product, exchangeRate: number): FinancialResult {
   const costInBrl = product.currency === 'USD' ? product.unitCost * exchangeRate : product.unitCost
-  const stInBrl = product.currency === 'USD' ? product.st * exchangeRate : product.st
 
   const totalPurchaseCost = costInBrl * product.qty
   const unitSalePrice = costInBrl * product.salesFactor
   const totalSalePrice = unitSalePrice * product.qty
-  const totalStValue = stInBrl * product.qty
+
+  const difalValueInBrl = totalPurchaseCost * (product.difal / 100)
+  const totalDifalValue = difalValueInBrl
 
   const unitSalePriceUsd = unitSalePrice / exchangeRate
   const totalSalePriceUsd = totalSalePrice / exchangeRate
@@ -19,17 +20,21 @@ export function calculateFinancials(product: Product, exchangeRate: number): Fin
     ipi:
       totalSalePrice * (product.taxRates.ipi / 100) -
       totalPurchaseCost * (product.taxRates.ipi / 100),
-    pisCofins:
-      totalSalePrice * (product.taxRates.pisCofins / 100) -
-      totalPurchaseCost * (product.taxRates.pisCofins / 100),
+    pis:
+      totalSalePrice * (product.taxRates.pis / 100) -
+      totalPurchaseCost * (product.taxRates.pis / 100),
+    cofins:
+      totalSalePrice * (product.taxRates.cofins / 100) -
+      totalPurchaseCost * (product.taxRates.cofins / 100),
     iss:
       totalSalePrice * (product.taxRates.iss / 100) -
       totalPurchaseCost * (product.taxRates.iss / 100),
   }
 
-  const totalTaxesValue = taxValues.icms + taxValues.ipi + taxValues.pisCofins + taxValues.iss
+  const totalTaxesValue =
+    taxValues.icms + taxValues.ipi + taxValues.pis + taxValues.cofins + taxValues.iss
 
-  const preliminaryNet = totalSalePrice - totalPurchaseCost - totalTaxesValue - totalStValue
+  const preliminaryNet = totalSalePrice - totalPurchaseCost - totalTaxesValue - totalDifalValue
 
   const encargoValues = {
     nf: preliminaryNet * (product.encargoRates.nf / 100),
@@ -50,7 +55,7 @@ export function calculateFinancials(product: Product, exchangeRate: number): Fin
     totalSalePriceUsd,
     totalPurchaseCost,
     totalTaxesValue,
-    totalStValue,
+    totalDifalValue,
     preliminaryNet,
     totalEncargosValue,
     netValue,

@@ -116,15 +116,13 @@ export function ProductEditForm({
           product.unitCost,
           (v) => handleUpdate({ unitCost: Number(v) }),
           'number',
-          undefined,
-          'lg:col-span-2',
         )}
         {renderField(
-          'ST (Valor Unit.)',
-          product.st,
-          (v) => handleUpdate({ st: Number(v) }),
+          'DIFAL (%)',
+          product.difal,
+          (v) => handleUpdate({ difal: Number(v) }),
           'number',
-          formatCurrency(financials.totalStValue),
+          formatCurrency(financials.totalDifalValue),
         )}
         {renderField(
           'ICMS (%)',
@@ -141,11 +139,18 @@ export function ProductEditForm({
           formatCurrency(financials.taxValues.ipi),
         )}
         {renderField(
-          'PIS/COFINS (%)',
-          product.taxRates.pisCofins,
-          (v) => handleUpdate({ taxRates: { ...product.taxRates, pisCofins: Number(v) } }),
+          'PIS (%)',
+          product.taxRates.pis,
+          (v) => handleUpdate({ taxRates: { ...product.taxRates, pis: Number(v) } }),
           'number',
-          formatCurrency(financials.taxValues.pisCofins),
+          formatCurrency(financials.taxValues.pis),
+        )}
+        {renderField(
+          'COFINS (%)',
+          product.taxRates.cofins,
+          (v) => handleUpdate({ taxRates: { ...product.taxRates, cofins: Number(v) } }),
+          'number',
+          formatCurrency(financials.taxValues.cofins),
         )}
         {renderField(
           'ISS (%)',

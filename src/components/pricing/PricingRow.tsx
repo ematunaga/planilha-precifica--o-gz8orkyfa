@@ -35,7 +35,11 @@ export function PricingRow({ product }: { product: Product }) {
   }[product.type]
 
   const totalTaxRate =
-    product.taxRates.icms + product.taxRates.ipi + product.taxRates.pisCofins + product.taxRates.iss
+    product.taxRates.icms +
+    product.taxRates.ipi +
+    product.taxRates.pis +
+    product.taxRates.cofins +
+    product.taxRates.iss
   const totalEncargoRate =
     product.encargoRates.nf + product.encargoRates.admin + product.encargoRates.comissao
 
@@ -80,8 +84,10 @@ export function PricingRow({ product }: { product: Product }) {
                 <span className="text-right">{formatPercent(product.taxRates.icms)}</span>
                 <span>IPI:</span>
                 <span className="text-right">{formatPercent(product.taxRates.ipi)}</span>
-                <span>PIS/COFINS:</span>
-                <span className="text-right">{formatPercent(product.taxRates.pisCofins)}</span>
+                <span>PIS:</span>
+                <span className="text-right">{formatPercent(product.taxRates.pis)}</span>
+                <span>COFINS:</span>
+                <span className="text-right">{formatPercent(product.taxRates.cofins)}</span>
                 <span>ISS:</span>
                 <span className="text-right">{formatPercent(product.taxRates.iss)}</span>
               </div>

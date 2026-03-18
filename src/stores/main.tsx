@@ -19,9 +19,9 @@ const defaultProducts: Product[] = [
     currency: 'USD',
     qty: 5,
     unitCost: 850.0,
-    st: 0,
+    difal: 0,
     salesModel: 'Direct',
-    taxRates: { icms: 18, ipi: 5, pisCofins: 9.25, iss: 0 },
+    taxRates: { icms: 18, ipi: 5, pis: 1.65, cofins: 7.6, iss: 0 },
     encargoRates: { nf: 2, admin: 5, comissao: 3 },
     salesFactor: 2.5,
   },
@@ -33,9 +33,9 @@ const defaultProducts: Product[] = [
     currency: 'BRL',
     qty: 40,
     unitCost: 150.0,
-    st: 0,
+    difal: 0,
     salesModel: 'Direct',
-    taxRates: { icms: 0, ipi: 0, pisCofins: 9.25, iss: 5 },
+    taxRates: { icms: 0, ipi: 0, pis: 1.65, cofins: 7.6, iss: 5 },
     encargoRates: { nf: 2, admin: 10, comissao: 0 },
     salesFactor: 2.0,
   },
@@ -57,6 +57,7 @@ interface MainStoreState {
   fetchExchangeRate: () => Promise<void>
   updateProduct: (id: string, updates: Partial<Product>) => void
   addProduct: (product: Product) => void
+  addProducts: (products: Product[]) => void
   removeProduct: (id: string) => void
   setProducts: (products: Product[]) => void
   createFolder: (name: string) => string
@@ -173,7 +174,27 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   const loadVersion = (versionId: string) => {
     const v = versions.find((v) => v.id === versionId)
     if (v) {
-      setProducts(v.products)
+      // Migrate old products to new format if needed
+      const migratedProducts = v.products.map((p: any) => ({
+        ...p,
+        difal: p.difal !== undefined ? p.difal : p.st !== undefined ? p.st : 0,
+        taxRates: {
+          ...p.taxRates,
+          pis:
+            p.taxRates.pis !== undefined
+              ? p.taxRates.pis
+              : p.taxRates.pisCofins
+                ? p.taxRates.pisCofins * 0.178
+                : 1.65,
+          cofins:
+            p.taxRates.cofins !== undefined
+              ? p.taxRates.cofins
+              : p.taxRates.pisCofins
+                ? p.taxRates.pisCofins * 0.822
+                : 7.6,
+        },
+      }))
+      setProducts(migratedProducts)
       setExchangeRate(v.exchangeRate)
       setPID(v.projectId)
       setVID(v.id)
@@ -228,6 +249,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   const updateProduct = (id: string, upd: Partial<Product>) =>
     setProducts((p) => p.map((x) => (x.id === id ? { ...x, ...upd } : x)))
   const addProduct = (product: Product) => setProducts((p) => [product, ...p])
+  const addProducts = (newProducts: Product[]) => setProducts((p) => [...newProducts, ...p])
   const removeProduct = (id: string) => setProducts((p) => p.filter((x) => x.id !== id))
 
   const store = {
@@ -246,6 +268,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     fetchExchangeRate,
     updateProduct,
     addProduct,
+    addProducts,
     removeProduct,
     setProducts,
     createFolder,

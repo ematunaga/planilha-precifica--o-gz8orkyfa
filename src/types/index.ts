@@ -17,7 +17,8 @@ export interface User {
 export interface TaxRates {
   icms: number
   ipi: number
-  pisCofins: number
+  pis: number
+  cofins: number
   iss: number
 }
 
@@ -35,7 +36,7 @@ export interface Product {
   currency: Currency
   qty: number
   unitCost: number
-  st: number
+  difal: number
   salesModel: SalesModel
   taxRates: TaxRates
   encargoRates: EncargoRates
@@ -49,7 +50,7 @@ export interface FinancialResult {
   totalSalePriceUsd: number
   totalPurchaseCost: number
   totalTaxesValue: number
-  totalStValue: number
+  totalDifalValue: number
   preliminaryNet: number
   totalEncargosValue: number
   netValue: number

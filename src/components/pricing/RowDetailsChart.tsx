@@ -15,7 +15,7 @@ const chartConfig = {
   value: { label: 'Valor' },
   cost: { label: 'Custo Compra', color: 'hsl(var(--chart-1))' },
   taxes: { label: 'Impostos', color: 'hsl(var(--chart-2))' },
-  st: { label: 'ST', color: 'hsl(var(--chart-4))' },
+  difal: { label: 'DIFAL', color: 'hsl(var(--chart-4))' },
   encargos: { label: 'Encargos', color: 'hsl(var(--chart-5))' },
   profit: { label: 'Lucro Líquido', color: 'hsl(var(--chart-3))' },
 } satisfies ChartConfig
@@ -26,8 +26,8 @@ export function RowDetailsChart({ financials }: { financials: FinancialResult })
       { name: 'Custo Compra', value: financials.totalPurchaseCost, fill: 'var(--color-cost)' },
       { name: 'Impostos', value: financials.totalTaxesValue, fill: 'var(--color-taxes)' },
     ]
-    if (financials.totalStValue > 0) {
-      data.push({ name: 'ST', value: financials.totalStValue, fill: 'var(--color-st)' })
+    if (financials.totalDifalValue > 0) {
+      data.push({ name: 'DIFAL', value: financials.totalDifalValue, fill: 'var(--color-difal)' })
     }
     data.push(
       { name: 'Encargos', value: financials.totalEncargosValue, fill: 'var(--color-encargos)' },

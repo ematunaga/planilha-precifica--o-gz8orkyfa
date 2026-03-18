@@ -9,13 +9,14 @@ import {
 import { Card } from '@/components/ui/card'
 import { PricingRow } from './PricingRow'
 import { useMainStore } from '@/stores/main'
-import { Search, Plus, RefreshCw } from 'lucide-react'
+import { Search, Plus, RefreshCw, UploadCloud } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { useState } from 'react'
 import { Product } from '@/types'
 import { toast } from 'sonner'
+import { ImportDialog } from './ImportDialog'
 
 export function PricingTable() {
   const {
@@ -28,7 +29,9 @@ export function PricingTable() {
     activeProjectId,
     templates,
   } = useMainStore()
+
   const [search, setSearch] = useState('')
+  const [isImportOpen, setIsImportOpen] = useState(false)
 
   const filteredProducts = products.filter(
     (p) =>
@@ -55,9 +58,11 @@ export function PricingTable() {
       currency: 'BRL',
       qty: 1,
       unitCost: 100,
-      st: 0,
+      difal: 0,
       salesModel: 'Direct',
-      taxRates: template ? { ...template.taxRates } : { icms: 0, ipi: 0, pisCofins: 9.25, iss: 0 },
+      taxRates: template
+        ? { ...template.taxRates }
+        : { icms: 0, ipi: 0, pis: 1.65, cofins: 7.6, iss: 0 },
       encargoRates: template ? { ...template.encargoRates } : { nf: 2, admin: 5, comissao: 3 },
       salesFactor: 1.5,
     }
@@ -101,6 +106,14 @@ export function PricingTable() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <Button
+            onClick={() => setIsImportOpen(true)}
+            size="sm"
+            variant="outline"
+            className="h-9 shrink-0"
+          >
+            <UploadCloud className="h-4 w-4 mr-1" /> Importar
+          </Button>
           <Button onClick={handleAddProduct} size="sm" className="h-9 shrink-0">
             <Plus className="h-4 w-4 mr-1" /> Adicionar
           </Button>
@@ -134,6 +147,8 @@ export function PricingTable() {
           </TableBody>
         </Table>
       </div>
+
+      <ImportDialog open={isImportOpen} onOpenChange={setIsImportOpen} />
     </Card>
   )
 }
