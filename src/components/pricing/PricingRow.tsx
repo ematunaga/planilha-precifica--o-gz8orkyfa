@@ -5,6 +5,13 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useMainStore } from '@/stores/main'
 import { Product } from '@/types'
 import { calculateFinancials } from '@/lib/calculations'
@@ -58,7 +65,43 @@ export function PricingRow({ product }: { product: Product }) {
             {product.description}
           </div>
         </TableCell>
-        <TableCell>
+        <TableCell className="hidden lg:table-cell p-2" onClick={(e) => e.stopPropagation()}>
+          <Select
+            value={product.manufacturer || ''}
+            onValueChange={(v) => updateProduct(product.id, { manufacturer: v })}
+          >
+            <SelectTrigger className="h-8 w-full min-w-[120px] text-xs shadow-none">
+              <SelectValue placeholder="Fabricante" />
+            </SelectTrigger>
+            <SelectContent>
+              {['Huawei EBG', 'Huawei EKIT', 'AWS', 'Fortinet', 'Acronis', 'Outros'].map((f) => (
+                <SelectItem key={f} value={f}>
+                  {f}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </TableCell>
+        <TableCell className="hidden lg:table-cell p-2" onClick={(e) => e.stopPropagation()}>
+          <Select
+            value={product.distributor || ''}
+            onValueChange={(v) => updateProduct(product.id, { distributor: v })}
+          >
+            <SelectTrigger className="h-8 w-full min-w-[120px] text-xs shadow-none">
+              <SelectValue placeholder="Distribuidor" />
+            </SelectTrigger>
+            <SelectContent>
+              {['SND', 'AGIS', 'ESY', 'TD Synnex', 'WDC', 'Ingram', 'CLM', 'DICOMP', 'Prime8'].map(
+                (d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ),
+              )}
+            </SelectContent>
+          </Select>
+        </TableCell>
+        <TableCell className="hidden md:table-cell">
           <Badge variant="outline" className={cn('border-transparent font-semibold', badgeColor)}>
             {product.type}
           </Badge>
@@ -73,7 +116,7 @@ export function PricingRow({ product }: { product: Product }) {
             {formatCurrency(financials.totalPurchaseCost)} total
           </div>
         </TableCell>
-        <TableCell className="text-right hidden md:table-cell">
+        <TableCell className="text-right hidden xl:table-cell">
           <Tooltip>
             <TooltipTrigger className="cursor-help underline decoration-dashed underline-offset-4">
               {formatPercent(totalTaxRate)}
@@ -94,7 +137,7 @@ export function PricingRow({ product }: { product: Product }) {
             </TooltipContent>
           </Tooltip>
         </TableCell>
-        <TableCell className="text-right hidden lg:table-cell">
+        <TableCell className="text-right hidden xl:table-cell">
           <Tooltip>
             <TooltipTrigger className="cursor-help underline decoration-dashed underline-offset-4">
               {formatPercent(totalEncargoRate)}
@@ -179,7 +222,7 @@ export function PricingRow({ product }: { product: Product }) {
 
       {isOpen && (
         <TableRow className="bg-muted/10 hover:bg-muted/10 border-b-2 border-primary/20">
-          <TableCell colSpan={9} className="p-4">
+          <TableCell colSpan={11} className="p-4">
             <div className="animate-in slide-in-from-top-2 fade-in duration-200">
               <div className="flex flex-col xl:flex-row gap-6">
                 <div className="flex-1">

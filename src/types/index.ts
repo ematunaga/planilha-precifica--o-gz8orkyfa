@@ -41,6 +41,8 @@ export interface Product {
   taxRates: TaxRates
   encargoRates: EncargoRates
   salesFactor: number
+  manufacturer?: string
+  distributor?: string
 }
 
 export interface FinancialResult {

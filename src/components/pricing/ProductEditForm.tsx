@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/formatters'
 import { Separator } from '@/components/ui/separator'
+import { supabase } from '@/lib/supabase/client'
+import { toast } from 'sonner'
 
 export function ProductEditForm({
   product,
@@ -23,6 +25,29 @@ export function ProductEditForm({
 
   const handleUpdate = (updates: Partial<Product>) => {
     updateProduct(product.id, updates)
+  }
+
+  const handlePnBlur = async (v: string) => {
+    if (!v || v.trim() === '' || v === 'NOVO-ITEM') return
+    try {
+      const { data } = await supabase
+        .from('products')
+        .select('*')
+        .eq('part_number', v)
+        .maybeSingle()
+      if (data) {
+        handleUpdate({
+          description: data.description || product.description,
+          manufacturer: data.manufacturer || product.manufacturer,
+          distributor: data.distributor || product.distributor,
+          unitCost: data.current_unit_cost || product.unitCost,
+          currency: (data.currency as any) || product.currency,
+        })
+        toast.success('Produto preenchido via catálogo mestre!')
+      }
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   const renderField = (
@@ -47,23 +72,62 @@ export function ProductEditForm({
 
   return (
     <div className="space-y-6 text-sm">
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-        {renderField(
-          'Part Number',
-          product.pn,
-          (v) => handleUpdate({ pn: v }),
-          'text',
-          undefined,
-          'lg:col-span-2',
-        )}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-10 gap-4">
+        <div className="space-y-1 lg:col-span-2">
+          <Label>Part Number</Label>
+          <Input
+            type="text"
+            value={product.pn}
+            onChange={(e) => handleUpdate({ pn: e.target.value })}
+            onBlur={(e) => handlePnBlur(e.target.value)}
+          />
+        </div>
         {renderField(
           'Descrição',
           product.description,
           (v) => handleUpdate({ description: v }),
           'text',
           undefined,
-          'lg:col-span-3',
+          'lg:col-span-2',
         )}
+        <div className="space-y-1 lg:col-span-2">
+          <Label>Fabricante</Label>
+          <Select
+            value={product.manufacturer || ''}
+            onValueChange={(v: string) => handleUpdate({ manufacturer: v })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {['Huawei EBG', 'Huawei EKIT', 'AWS', 'Fortinet', 'Acronis', 'Outros'].map((f) => (
+                <SelectItem key={f} value={f}>
+                  {f}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1 lg:col-span-2">
+          <Label>Distribuidor</Label>
+          <Select
+            value={product.distributor || ''}
+            onValueChange={(v: string) => handleUpdate({ distributor: v })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {['SND', 'AGIS', 'ESY', 'TD Synnex', 'WDC', 'Ingram', 'CLM', 'DICOMP', 'Prime8'].map(
+                (d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ),
+              )}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1">
           <Label>Tipo</Label>
           <Select value={product.type} onValueChange={(v: any) => handleUpdate({ type: v })}>
@@ -92,8 +156,18 @@ export function ProductEditForm({
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-4">
+        {renderField('Quantidade', product.qty, (v) => handleUpdate({ qty: Number(v) }), 'number')}
+        {renderField(
+          'Custo Unitário',
+          product.unitCost,
+          (v) => handleUpdate({ unitCost: Number(v) }),
+          'number',
+        )}
         <div className="space-y-1">
-          <Label>Modelo Venda</Label>
+          <Label>Mod. Venda</Label>
           <Select
             value={product.salesModel}
             onValueChange={(v: any) => handleUpdate({ salesModel: v })}
@@ -107,16 +181,6 @@ export function ProductEditForm({
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-        {renderField('Quantidade', product.qty, (v) => handleUpdate({ qty: Number(v) }), 'number')}
-        {renderField(
-          'Custo Unitário',
-          product.unitCost,
-          (v) => handleUpdate({ unitCost: Number(v) }),
-          'number',
-        )}
         {renderField(
           'DIFAL (%)',
           product.difal,

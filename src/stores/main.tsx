@@ -74,6 +74,8 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
       if (activeVer && activeVer.products) {
         return activeVer.products.map((p: any) => ({
           ...p,
+          manufacturer: p.manufacturer || '',
+          distributor: p.distributor || '',
           difal: p.difal !== undefined ? p.difal : p.st !== undefined ? p.st : 0,
           taxRates: {
             ...p.taxRates,
@@ -233,6 +235,8 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     if (v) {
       const migratedProducts = v.products.map((p: any) => ({
         ...p,
+        manufacturer: p.manufacturer || '',
+        distributor: p.distributor || '',
         difal: p.difal !== undefined ? p.difal : p.st !== undefined ? p.st : 0,
         taxRates: {
           ...p.taxRates,
@@ -261,7 +265,6 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     const pid = createProject(folderId, pName, templateId)
     setPID(pid)
 
-    // Explicitly start new project with an empty products array
     setProducts([])
     createVersion(pid, vName, [])
   }

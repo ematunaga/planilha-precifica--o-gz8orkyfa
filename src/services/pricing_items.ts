@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { Product } from '@/types'
+import { syncProductsFromPricing } from './products'
 
 export const savePricingItems = async (versionId: string, projectId: string, items: Product[]) => {
   const {
@@ -20,6 +21,8 @@ export const savePricingItems = async (versionId: string, projectId: string, ite
     version_id: versionId,
     project_id: projectId,
     created_by: user?.id || null,
+    manufacturer: item.manufacturer,
+    distributor: item.distributor,
   }))
 
   const { error } = await supabase.from('pricing_items').insert(records)
@@ -27,5 +30,11 @@ export const savePricingItems = async (versionId: string, projectId: string, ite
     console.error('Error saving pricing items to Supabase:', error)
     throw error
   }
+
+  // Sync with Master List asynchronously to avoid blocking the save operation excessively
+  syncProductsFromPricing(items).catch((err) => {
+    console.error('Error syncing products with Master List:', err)
+  })
+
   return true
 }

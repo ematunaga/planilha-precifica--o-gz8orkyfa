@@ -12,6 +12,7 @@ import Dashboard from '@/pages/Dashboard'
 import Projetos from '@/pages/Projetos'
 import Pricing from '@/pages/Pricing'
 import Simulador from '@/pages/Simulador'
+import Produtos from '@/pages/Produtos'
 import Configuracoes from '@/pages/Configuracoes'
 import Users from '@/pages/Users'
 import NotFound from '@/pages/NotFound'
@@ -80,6 +81,7 @@ const AppRoutes = () => {
         <Route path="/projetos" element={<Projetos />} />
         <Route path="/precificacao" element={<Pricing />} />
         <Route path="/simulador" element={<Simulador />} />
+        <Route path="/produtos" element={<Produtos />} />
         <Route path="/configuracoes" element={<Configuracoes />} />
         <Route path="/users" element={<Users />} />
       </Route>

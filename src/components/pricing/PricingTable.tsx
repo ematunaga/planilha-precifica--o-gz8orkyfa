@@ -58,6 +58,8 @@ export function PricingTable() {
       unitCost: 100,
       difal: 0,
       salesModel: 'Direct',
+      manufacturer: '',
+      distributor: '',
       taxRates: template
         ? { ...template.taxRates }
         : { icms: 0, ipi: 0, pis: 1.65, cofins: 7.6, iss: 0 },
@@ -114,11 +116,13 @@ export function PricingTable() {
           <TableHeader>
             <TableRow className="bg-muted/50 hover:bg-muted/50">
               <TableHead className="w-[200px] lg:w-[250px]">Produto</TableHead>
-              <TableHead>Tipo</TableHead>
+              <TableHead className="hidden lg:table-cell w-[140px]">Fabricante</TableHead>
+              <TableHead className="hidden lg:table-cell w-[140px]">Distribuidor</TableHead>
+              <TableHead className="hidden md:table-cell">Tipo</TableHead>
               <TableHead className="text-right">Qtd</TableHead>
               <TableHead className="text-right">Custo</TableHead>
-              <TableHead className="text-right hidden md:table-cell">Impostos</TableHead>
-              <TableHead className="text-right hidden lg:table-cell">Encargos</TableHead>
+              <TableHead className="text-right hidden xl:table-cell">Impostos</TableHead>
+              <TableHead className="text-right hidden xl:table-cell">Encargos</TableHead>
               <TableHead className="text-right w-[120px]">Fator / Preço</TableHead>
               <TableHead className="text-right w-[120px]">Resultado Líq.</TableHead>
               <TableHead className="w-[80px]"></TableHead>
@@ -127,7 +131,7 @@ export function PricingTable() {
           <TableBody>
             {products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-48 text-center bg-muted/5 hover:bg-muted/5">
+                <TableCell colSpan={11} className="h-48 text-center bg-muted/5 hover:bg-muted/5">
                   <div className="flex flex-col items-center justify-center text-muted-foreground gap-3 py-6">
                     <FileText className="h-10 w-10 opacity-20 mb-2" />
                     <p className="text-base font-medium">Nenhum produto adicionado ainda.</p>
@@ -142,7 +146,7 @@ export function PricingTable() {
               </TableRow>
             ) : filteredProducts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={11} className="h-24 text-center text-muted-foreground">
                   Nenhum produto encontrado para "{search}".
                 </TableCell>
               </TableRow>
