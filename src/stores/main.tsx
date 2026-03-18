@@ -70,6 +70,11 @@ interface MainStoreState {
   startNewProject: (folderId: string, pName: string, vName: string, templateId?: string) => void
   saveTemplate: (name: string, taxRates: TaxRates, encargoRates: EncargoRates) => void
   deleteTemplate: (id: string) => void
+  applySimulationAndSave: (
+    multiplier: number,
+    preSimName: string,
+    simName: string,
+  ) => { preSimId: string; simId: string; preSimProducts: Product[]; simProducts: Product[] } | void
 }
 
 const MainStoreContext = createContext<MainStoreState | null>(null)
@@ -171,10 +176,48 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     return id
   }
 
+  const applySimulationAndSave = (multiplier: number, preSimName: string, simName: string) => {
+    if (!activeProjectId) return
+
+    const preSimId = Date.now().toString() + '-pre'
+    const simId = Date.now().toString() + '-sim'
+
+    const preSimProducts = [...products]
+    const simProducts = products.map((p) => ({
+      ...p,
+      salesFactor: p.salesFactor * multiplier,
+    }))
+
+    const preSimVersion: ProjectVersion = {
+      id: preSimId,
+      projectId: activeProjectId,
+      name: preSimName,
+      date: new Date().toISOString(),
+      products: preSimProducts,
+      exchangeRate,
+      createdBy: profile?.id,
+    }
+
+    const simVersion: ProjectVersion = {
+      id: simId,
+      projectId: activeProjectId,
+      name: simName,
+      date: new Date().toISOString(),
+      products: simProducts,
+      exchangeRate,
+      createdBy: profile?.id,
+    }
+
+    setVersions((p) => [...p, preSimVersion, simVersion])
+    setProducts(simProducts)
+    setVID(simId)
+
+    return { preSimId, simId, preSimProducts, simProducts }
+  }
+
   const loadVersion = (versionId: string) => {
     const v = versions.find((v) => v.id === versionId)
     if (v) {
-      // Migrate old products to new format if needed
       const migratedProducts = v.products.map((p: any) => ({
         ...p,
         difal: p.difal !== undefined ? p.difal : p.st !== undefined ? p.st : 0,
@@ -281,6 +324,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     startNewProject,
     saveTemplate,
     deleteTemplate,
+    applySimulationAndSave,
   }
   return React.createElement(MainStoreContext.Provider, { value: store }, children)
 }

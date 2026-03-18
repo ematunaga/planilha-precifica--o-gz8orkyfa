@@ -1,0 +1,4 @@
+ALTER TABLE public.pricing_items
+ADD COLUMN IF NOT EXISTS version_id TEXT,
+ADD COLUMN IF NOT EXISTS project_id TEXT,
+ADD COLUMN IF NOT EXISTS sales_factor NUMERIC DEFAULT 1.0;

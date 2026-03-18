@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Calculator, ArrowRight, Target, Info, CheckCircle2 } from 'lucide-react'
+import { Calculator, ArrowRight, Target, Info, CheckCircle2, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -11,13 +11,22 @@ import { useMainStore } from '@/stores/main'
 import { useAuth } from '@/hooks/use-auth'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import { savePricingItems } from '@/services/pricing_items'
 
 export default function Simulador() {
-  const { products, exchangeRate, updateProduct, activeProjectId } = useMainStore()
+  const {
+    products,
+    exchangeRate,
+    activeProjectId,
+    activeVersionId,
+    versions,
+    applySimulationAndSave,
+  } = useMainStore()
   const { profile } = useAuth()
   const navigate = useNavigate()
 
   const isViewer = profile?.role === 'Viewer' || profile?.role === 'Visualizador'
+  const [isSaving, setIsSaving] = useState(false)
 
   const projectSim = useMemo(() => {
     let A = 0
@@ -27,16 +36,18 @@ export default function Simulador() {
 
     products.forEach((p) => {
       const costInBrl = p.currency === 'USD' ? p.unitCost * exchangeRate : p.unitCost
-      const stInBrl = p.currency === 'USD' ? p.st * exchangeRate : p.st
       const C_i = costInBrl * p.qty
       const S_i = C_i * p.salesFactor
-      const ST_i = stInBrl * p.qty
-      const t_i = (p.taxRates.icms + p.taxRates.ipi + p.taxRates.pisCofins + p.taxRates.iss) / 100
+      const DIFAL_i = C_i * (p.difal / 100)
+
+      const t_i =
+        (p.taxRates.icms + p.taxRates.ipi + p.taxRates.pis + p.taxRates.cofins + p.taxRates.iss) /
+        100
       const e_i = (p.encargoRates.nf + p.encargoRates.admin + p.encargoRates.comissao) / 100
       const K_i = (1 - t_i) * (1 - e_i)
 
       A += S_i * K_i
-      B += C_i * K_i + ST_i * (1 - e_i)
+      B += C_i * K_i + DIFAL_i * (1 - e_i)
       currentSale += S_i
       currentCost += C_i
     })
@@ -73,10 +84,35 @@ export default function Simulador() {
     return { requiredSale, M, newAvgFactor, newProfit }
   }, [targetMarginPercent, projectSim])
 
-  const applyMultiplier = (multiplier: number) => {
-    if (multiplier <= 0) return
-    products.forEach((p) => updateProduct(p.id, { salesFactor: p.salesFactor * multiplier }))
-    toast.success('Fatores de venda atualizados em todo o projeto!')
+  const applyMultiplierAndSave = async (multiplier: number) => {
+    if (multiplier <= 0 || !activeProjectId) return
+
+    setIsSaving(true)
+
+    const baseName = activeVersionId
+      ? versions.find((v) => v.id === activeVersionId)?.name || 'Versão Atual'
+      : `Versão ${versions.filter((v) => v.projectId === activeProjectId).length + 1}`
+
+    const preSimName = `${baseName} (Pré-simulação)`
+    const simName = `${baseName} (Simulado)`
+
+    try {
+      const result = applySimulationAndSave(multiplier, preSimName, simName)
+      if (result) {
+        const { preSimId, simId, preSimProducts, simProducts } = result
+
+        await savePricingItems(preSimId, activeProjectId, preSimProducts)
+        await savePricingItems(simId, activeProjectId, simProducts)
+
+        toast.success('Simulação aplicada e nova versão salva!')
+        navigate('/precificacao')
+      }
+    } catch (error) {
+      console.error(error)
+      toast.error('Erro ao salvar as versões no banco de dados.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   if (!activeProjectId) {
@@ -216,11 +252,16 @@ export default function Simulador() {
                   </div>
                   <div className="pt-6 mt-auto">
                     <Button
-                      onClick={() => applyMultiplier(sim1.M)}
+                      onClick={() => applyMultiplierAndSave(sim1.M)}
                       className="w-full"
-                      disabled={isViewer}
+                      disabled={isViewer || isSaving}
                     >
-                      <CheckCircle2 className="mr-2 h-4 w-4" /> Aplicar ao Projeto
+                      {isSaving ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                      )}{' '}
+                      Aplicar ao Projeto
                     </Button>
                     <p className="text-[10px] text-center text-muted-foreground mt-2">
                       Multiplica os fatores de venda de todos os itens por {sim1.M.toFixed(4)}.
@@ -261,11 +302,16 @@ export default function Simulador() {
                       </div>
                       <div className="pt-6 mt-auto">
                         <Button
-                          onClick={() => applyMultiplier(sim2.M)}
+                          onClick={() => applyMultiplierAndSave(sim2.M)}
                           className="w-full"
-                          disabled={isViewer}
+                          disabled={isViewer || isSaving}
                         >
-                          <CheckCircle2 className="mr-2 h-4 w-4" /> Aplicar ao Projeto
+                          {isSaving ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                          )}{' '}
+                          Aplicar ao Projeto
                         </Button>
                         <p className="text-[10px] text-center text-muted-foreground mt-2">
                           Multiplica os fatores de venda de todos os itens por {sim2.M.toFixed(4)}.
