@@ -91,7 +91,7 @@ const AppRoutes = () => {
 const App = () => (
   <AuthProvider>
     <MainStoreProvider>
-      <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <TooltipProvider>
           <Toaster />
           <Sonner />

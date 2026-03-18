@@ -131,7 +131,9 @@ export function PricingTable() {
                   <div className="flex flex-col items-center justify-center text-muted-foreground gap-3 py-6">
                     <FileText className="h-10 w-10 opacity-20 mb-2" />
                     <p className="text-base font-medium">Nenhum produto adicionado ainda.</p>
-                    <p className="text-sm">Comece adicionando um item ou serviço para precificar seu projeto.</p>
+                    <p className="text-sm">
+                      Comece adicionando um item ou serviço para precificar seu projeto.
+                    </p>
                     <Button variant="outline" onClick={handleAddProduct} className="mt-2">
                       <Plus className="h-4 w-4 mr-2" /> Adicionar Primeiro Produto
                     </Button>

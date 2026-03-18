@@ -163,13 +163,13 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     setFolders((p) => [...p, { id, name, createdBy: profile?.id }])
     return id
   }
-  
+
   const createProject = (folderId: string, name: string, templateId?: string) => {
     const id = Date.now().toString()
     setProjects((p) => [...p, { id, folderId, name, templateId, createdBy: profile?.id }])
     return id
   }
-  
+
   const createVersion = (projectId: string, name: string, overrideProducts?: Product[]) => {
     const id = Date.now().toString()
     const targetProducts = overrideProducts || products
@@ -260,7 +260,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   const startNewProject = (folderId: string, pName: string, vName: string, templateId?: string) => {
     const pid = createProject(folderId, pName, templateId)
     setPID(pid)
-    
+
     // Explicitly start new project with an empty products array
     setProducts([])
     createVersion(pid, vName, [])

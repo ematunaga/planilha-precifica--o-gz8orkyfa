@@ -98,7 +98,7 @@ export default function Pricing() {
     if (!activeProjectId) return
     setIsSaving(true)
     const name = newVersionName.trim() || `Versão ${projectVersions.length + 1}`
-    
+
     try {
       const vid = createVersion(activeProjectId, name)
       if (products.length > 0) {
