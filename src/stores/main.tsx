@@ -10,37 +10,6 @@ import {
 } from '@/types'
 import { useAuth } from '@/hooks/use-auth'
 
-const defaultProducts: Product[] = [
-  {
-    id: '1',
-    pn: 'CISCO-WS-C2960X',
-    description: 'Switch Catalyst 2960-X 48 GigE',
-    type: 'HW',
-    currency: 'USD',
-    qty: 5,
-    unitCost: 850.0,
-    difal: 0,
-    salesModel: 'Direct',
-    taxRates: { icms: 18, ipi: 5, pis: 1.65, cofins: 7.6, iss: 0 },
-    encargoRates: { nf: 2, admin: 5, comissao: 3 },
-    salesFactor: 2.5,
-  },
-  {
-    id: '2',
-    pn: 'SRV-INST-01',
-    description: 'Instalação e Configuração On-Site',
-    type: 'Serviço',
-    currency: 'BRL',
-    qty: 40,
-    unitCost: 150.0,
-    difal: 0,
-    salesModel: 'Direct',
-    taxRates: { icms: 0, ipi: 0, pis: 1.65, cofins: 7.6, iss: 5 },
-    encargoRates: { nf: 2, admin: 10, comissao: 0 },
-    salesFactor: 2.0,
-  },
-]
-
 interface MainStoreState {
   folders: Folder[]
   projects: Project[]
@@ -62,7 +31,7 @@ interface MainStoreState {
   setProducts: (products: Product[]) => void
   createFolder: (name: string) => string
   createProject: (folderId: string, name: string, templateId?: string) => string
-  createVersion: (projectId: string, name: string) => string
+  createVersion: (projectId: string, name: string, overrideProducts?: Product[]) => string
   loadVersion: (versionId: string) => void
   deleteVersion: (id: string) => void
   deleteProject: (id: string) => void
@@ -96,8 +65,49 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   )
   const [activeProjectId, setPID] = useState<string | null>(() => localStorage.getItem('p_pid'))
   const [activeVersionId, setVID] = useState<string | null>(() => localStorage.getItem('p_vid'))
-  const [products, setProducts] = useState<Product[]>(defaultProducts)
-  const [exchangeRate, setExchangeRate] = useState<number>(5.15)
+
+  const [products, setProducts] = useState<Product[]>(() => {
+    const vid = localStorage.getItem('p_vid')
+    if (vid) {
+      const storedVersions = JSON.parse(localStorage.getItem('p_ver') || '[]')
+      const activeVer = storedVersions.find((v: any) => v.id === vid)
+      if (activeVer && activeVer.products) {
+        return activeVer.products.map((p: any) => ({
+          ...p,
+          difal: p.difal !== undefined ? p.difal : p.st !== undefined ? p.st : 0,
+          taxRates: {
+            ...p.taxRates,
+            pis:
+              p.taxRates.pis !== undefined
+                ? p.taxRates.pis
+                : p.taxRates.pisCofins
+                  ? p.taxRates.pisCofins * 0.178
+                  : 1.65,
+            cofins:
+              p.taxRates.cofins !== undefined
+                ? p.taxRates.cofins
+                : p.taxRates.pisCofins
+                  ? p.taxRates.pisCofins * 0.822
+                  : 7.6,
+          },
+        }))
+      }
+    }
+    return []
+  })
+
+  const [exchangeRate, setExchangeRate] = useState<number>(() => {
+    const vid = localStorage.getItem('p_vid')
+    if (vid) {
+      const storedVersions = JSON.parse(localStorage.getItem('p_ver') || '[]')
+      const activeVer = storedVersions.find((v: any) => v.id === vid)
+      if (activeVer && activeVer.exchangeRate) {
+        return activeVer.exchangeRate
+      }
+    }
+    return 5.15
+  })
+
   const [lastExchangeUpdate, setLastExchangeUpdate] = useState<string | null>(() =>
     localStorage.getItem('p_ex_date'),
   )
@@ -153,13 +163,16 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     setFolders((p) => [...p, { id, name, createdBy: profile?.id }])
     return id
   }
+  
   const createProject = (folderId: string, name: string, templateId?: string) => {
     const id = Date.now().toString()
     setProjects((p) => [...p, { id, folderId, name, templateId, createdBy: profile?.id }])
     return id
   }
-  const createVersion = (projectId: string, name: string) => {
+  
+  const createVersion = (projectId: string, name: string, overrideProducts?: Product[]) => {
     const id = Date.now().toString()
+    const targetProducts = overrideProducts || products
     setVersions((p) => [
       ...p,
       {
@@ -167,7 +180,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
         projectId,
         name,
         date: new Date().toISOString(),
-        products: [...products],
+        products: [...targetProducts],
         exchangeRate,
         createdBy: profile?.id,
       },
@@ -247,18 +260,10 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   const startNewProject = (folderId: string, pName: string, vName: string, templateId?: string) => {
     const pid = createProject(folderId, pName, templateId)
     setPID(pid)
-    let initialProducts = [...defaultProducts]
-    if (templateId) {
-      const tpl = templates.find((t) => t.id === templateId)
-      if (tpl)
-        initialProducts = initialProducts.map((p) => ({
-          ...p,
-          taxRates: { ...tpl.taxRates },
-          encargoRates: { ...tpl.encargoRates },
-        }))
-    }
-    setProducts(initialProducts)
-    createVersion(pid, vName)
+    
+    // Explicitly start new project with an empty products array
+    setProducts([])
+    createVersion(pid, vName, [])
   }
 
   const deleteFolder = (id: string) => {
@@ -269,6 +274,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     if (pids.includes(activeProjectId!)) {
       setPID(null)
       setVID(null)
+      setProducts([])
     }
   }
   const deleteProject = (id: string) => {
@@ -277,11 +283,14 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     if (activeProjectId === id) {
       setPID(null)
       setVID(null)
+      setProducts([])
     }
   }
   const deleteVersion = (id: string) => {
     setVersions((p) => p.filter((v) => v.id !== id))
-    if (activeVersionId === id) setVID(null)
+    if (activeVersionId === id) {
+      setVID(null)
+    }
   }
 
   const saveTemplate = (name: string, taxRates: TaxRates, encargoRates: EncargoRates) => {

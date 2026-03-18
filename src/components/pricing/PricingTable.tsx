@@ -9,7 +9,7 @@ import {
 import { Card } from '@/components/ui/card'
 import { PricingRow } from './PricingRow'
 import { useMainStore } from '@/stores/main'
-import { Search, Plus, RefreshCw } from 'lucide-react'
+import { Search, Plus, RefreshCw, FileText } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -125,10 +125,23 @@ export function PricingTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProducts.length === 0 ? (
+            {products.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="h-48 text-center bg-muted/5 hover:bg-muted/5">
+                  <div className="flex flex-col items-center justify-center text-muted-foreground gap-3 py-6">
+                    <FileText className="h-10 w-10 opacity-20 mb-2" />
+                    <p className="text-base font-medium">Nenhum produto adicionado ainda.</p>
+                    <p className="text-sm">Comece adicionando um item ou serviço para precificar seu projeto.</p>
+                    <Button variant="outline" onClick={handleAddProduct} className="mt-2">
+                      <Plus className="h-4 w-4 mr-2" /> Adicionar Primeiro Produto
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : filteredProducts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                  Nenhum produto encontrado.
+                  Nenhum produto encontrado para "{search}".
                 </TableCell>
               </TableRow>
             ) : (

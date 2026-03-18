@@ -9,6 +9,7 @@ import {
   ChevronRight,
   AlertCircle,
   BookmarkPlus,
+  Loader2,
 } from 'lucide-react'
 import { SummaryCards } from '@/components/pricing/SummaryCards'
 import { PricingTable } from '@/components/pricing/PricingTable'
@@ -37,6 +38,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { toast } from 'sonner'
 import { calculateFinancials } from '@/lib/calculations'
 import { ProjectVersion } from '@/types'
+import { savePricingItems } from '@/services/pricing_items'
 
 export default function Pricing() {
   const navigate = useNavigate()
@@ -62,6 +64,7 @@ export default function Pricing() {
   const [newVersionName, setNewVersionName] = useState('')
   const [isTemplateOpen, setIsTemplateOpen] = useState(false)
   const [templateName, setTemplateName] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeFolder = folders.find((f) => f.id === activeProject?.folderId)
@@ -91,12 +94,24 @@ export default function Pricing() {
     )
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!activeProjectId) return
+    setIsSaving(true)
     const name = newVersionName.trim() || `Versão ${projectVersions.length + 1}`
-    createVersion(activeProjectId, name)
-    setIsSaveOpen(false)
-    setNewVersionName('')
-    toast.success('Versão salva com sucesso!')
+    
+    try {
+      const vid = createVersion(activeProjectId, name)
+      if (products.length > 0) {
+        await savePricingItems(vid, activeProjectId, products)
+      }
+      setIsSaveOpen(false)
+      setNewVersionName('')
+      toast.success('Versão salva com sucesso!')
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao salvar versão no banco de dados.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleSaveTemplate = () => {
@@ -300,14 +315,18 @@ export default function Pricing() {
                 placeholder={`Ex: Versão ${projectVersions.length + 1}`}
                 onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                 autoFocus
+                disabled={isSaving}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSaveOpen(false)}>
+            <Button variant="outline" onClick={() => setIsSaveOpen(false)} disabled={isSaving}>
               Cancelar
             </Button>
-            <Button onClick={handleSave}>Salvar</Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Salvar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
