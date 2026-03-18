@@ -2,7 +2,6 @@
   "_versions": {
     "send-invite": 2,
     "create-user-admin": 1,
-    "delete-user-admin": 1,
-    "parse-file": 1
+    "delete-user-admin": 1
   }
 }
