@@ -1,5 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, FolderKanban, Calculator, Users, Settings, Box } from 'lucide-react'
+import {
+  LayoutDashboard,
+  FolderKanban,
+  Calculator,
+  Users,
+  Settings,
+  Box,
+  LineChart,
+} from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -14,6 +22,7 @@ const navItems = [
   { title: 'Dashboard', icon: LayoutDashboard, url: '/' },
   { title: 'Projetos', icon: FolderKanban, url: '/projetos' },
   { title: 'Produtos', icon: Box, url: '/produtos' },
+  { title: 'Dashboard Preços', icon: LineChart, url: '/dashboard-precos' },
   { title: 'Simulador', icon: Calculator, url: '/simulador' },
   { title: 'Usuários', icon: Users, url: '/users' },
   { title: 'Configurações', icon: Settings, url: '/configuracoes' },

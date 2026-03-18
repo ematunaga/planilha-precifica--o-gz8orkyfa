@@ -17,7 +17,9 @@ export type Database = {
           currency: string | null
           description: string | null
           difal: number | null
+          distributor: string | null
           id: string
+          manufacturer: string | null
           part_number: string
           pis: number | null
           project_id: string | null
@@ -34,7 +36,9 @@ export type Database = {
           currency?: string | null
           description?: string | null
           difal?: number | null
+          distributor?: string | null
           id?: string
+          manufacturer?: string | null
           part_number: string
           pis?: number | null
           project_id?: string | null
@@ -51,7 +55,9 @@ export type Database = {
           currency?: string | null
           description?: string | null
           difal?: number | null
+          distributor?: string | null
           id?: string
+          manufacturer?: string | null
           part_number?: string
           pis?: number | null
           project_id?: string | null
@@ -60,6 +66,71 @@ export type Database = {
           type?: string | null
           unit_cost?: number | null
           version_id?: string | null
+        }
+        Relationships: []
+      }
+      product_price_history: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          product_id: string
+          unit_cost: number
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          id?: string
+          product_id: string
+          unit_cost: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          product_id?: string
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'product_price_history_product_id_fkey'
+            columns: ['product_id']
+            isOneToOne: false
+            referencedRelation: 'products'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      products: {
+        Row: {
+          currency: string | null
+          current_unit_cost: number | null
+          description: string | null
+          distributor: string | null
+          id: string
+          manufacturer: string | null
+          part_number: string
+          updated_at: string
+        }
+        Insert: {
+          currency?: string | null
+          current_unit_cost?: number | null
+          description?: string | null
+          distributor?: string | null
+          id?: string
+          manufacturer?: string | null
+          part_number: string
+          updated_at?: string
+        }
+        Update: {
+          currency?: string | null
+          current_unit_cost?: number | null
+          description?: string | null
+          distributor?: string | null
+          id?: string
+          manufacturer?: string | null
+          part_number?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -280,6 +351,23 @@ export const Constants = {
 //   version_id: text (nullable)
 //   project_id: text (nullable)
 //   sales_factor: numeric (nullable, default: 1.0)
+//   manufacturer: text (nullable)
+//   distributor: text (nullable)
+// Table: product_price_history
+//   id: uuid (not null, default: gen_random_uuid())
+//   product_id: uuid (not null)
+//   unit_cost: numeric (not null)
+//   currency: text (not null)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: products
+//   id: uuid (not null, default: gen_random_uuid())
+//   part_number: text (not null)
+//   description: text (nullable)
+//   manufacturer: text (nullable)
+//   distributor: text (nullable)
+//   current_unit_cost: numeric (nullable)
+//   currency: text (nullable)
+//   updated_at: timestamp with time zone (not null, default: now())
 // Table: profiles
 //   id: uuid (not null)
 //   name: text (not null, default: ''::text)
@@ -299,6 +387,12 @@ export const Constants = {
 // Table: pricing_items
 //   FOREIGN KEY pricing_items_created_by_fkey: FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL
 //   PRIMARY KEY pricing_items_pkey: PRIMARY KEY (id)
+// Table: product_price_history
+//   PRIMARY KEY product_price_history_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY product_price_history_product_id_fkey: FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+// Table: products
+//   UNIQUE products_part_number_key: UNIQUE (part_number)
+//   PRIMARY KEY products_pkey: PRIMARY KEY (id)
 // Table: profiles
 //   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
@@ -315,6 +409,24 @@ export const Constants = {
 //   Policy "authenticated_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
 //   Policy "authenticated_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: true
+// Table: product_price_history
+//   Policy "authenticated_delete_history" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "authenticated_insert_history" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: true
+//   Policy "authenticated_select_history" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "authenticated_update_history" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: true
+// Table: products
+//   Policy "authenticated_delete_products" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "authenticated_insert_products" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: true
+//   Policy "authenticated_select_products" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "authenticated_update_products" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: true
 // Table: profiles
 //   Policy "Admins can delete profiles" (DELETE, PERMISSIVE) roles={authenticated}
@@ -355,5 +467,7 @@ export const Constants = {
 //
 
 // --- INDEXES ---
+// Table: products
+//   CREATE UNIQUE INDEX products_part_number_key ON public.products USING btree (part_number)
 // Table: user_invitations
 //   CREATE UNIQUE INDEX user_invitations_email_key ON public.user_invitations USING btree (email)

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Table,
   TableBody,
@@ -11,10 +12,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatCurrency } from '@/lib/formatters'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { History, Search, Box } from 'lucide-react'
+import { History, Search, Box, LineChart } from 'lucide-react'
 import { fetchProducts, fetchProductHistory } from '@/services/products'
 
 export default function Produtos() {
+  const navigate = useNavigate()
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -65,8 +67,8 @@ export default function Produtos() {
         <p className="text-muted-foreground">Catálogo mestre e histórico de preços.</p>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por PN, descrição, fabricante..."
@@ -75,6 +77,13 @@ export default function Produtos() {
             className="pl-9 bg-card"
           />
         </div>
+        <Button
+          variant="outline"
+          onClick={() => navigate('/dashboard-precos')}
+          className="shadow-sm w-full sm:w-auto"
+        >
+          <LineChart className="w-4 h-4 mr-2" /> Dashboard de Preços
+        </Button>
       </div>
 
       <div className="border rounded-md bg-card shadow-sm overflow-hidden flex-1 flex flex-col">
