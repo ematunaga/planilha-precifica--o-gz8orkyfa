@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Folder, FolderPlus, FileText, ChevronRight, Trash2 } from 'lucide-react'
+import { Folder, FolderPlus, FileText, ChevronRight, Trash2, Lock, Globe } from 'lucide-react'
 import { useMainStore } from '@/stores/main'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { Folder as FolderType, Project, ProjectVersion } from '@/types'
+import { Folder as FolderType, ProjectVersion } from '@/types'
 
 export default function Projetos() {
   const {
@@ -44,7 +45,7 @@ export default function Projetos() {
     return false
   }
 
-  const canDeleteProject = (p: Project) => {
+  const canDeleteProject = (p: any) => {
     if (profile?.role === 'Admin') return true
     if (profile?.role === 'Editor') return p.createdBy === profile?.id
     return false
@@ -130,9 +131,9 @@ export default function Projetos() {
                           ? 'text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground'
                           : 'text-muted-foreground hover:text-destructive',
                       )}
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation()
-                        deleteFolder(folder.id)
+                        await deleteFolder(folder.id)
                         toast.success('Pasta excluída')
                       }}
                     >
@@ -171,7 +172,24 @@ export default function Projetos() {
                   <Card key={project.id} className="shadow-subtle overflow-hidden flex flex-col">
                     <CardHeader className="bg-muted/10 pb-4 border-b flex flex-row items-start justify-between space-y-0">
                       <div>
-                        <CardTitle className="text-lg font-bold">{project.name}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-lg font-bold">{project.name}</CardTitle>
+                          {project.isPublic ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] flex items-center gap-1 bg-green-50 text-green-700 border-green-200 py-0 dark:bg-green-950 dark:text-green-300 dark:border-green-800"
+                            >
+                              <Globe className="h-3 w-3" /> Público
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] flex items-center gap-1 bg-slate-50 text-slate-700 border-slate-200 py-0 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800"
+                            >
+                              <Lock className="h-3 w-3" /> Privado
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           {projectVersions.length} versão(ões) salva(s)
                         </p>
@@ -181,8 +199,8 @@ export default function Projetos() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => {
-                            deleteProject(project.id)
+                          onClick={async () => {
+                            await deleteProject(project.id)
                             toast.success('Projeto excluído')
                           }}
                         >

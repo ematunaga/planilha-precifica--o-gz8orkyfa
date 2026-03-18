@@ -1,18 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import {
-  Product,
-  ProjectVersion,
-  Folder,
-  Project,
-  PricingTemplate,
-  TaxRates,
-  EncargoRates,
-} from '@/types'
+import { Product, ProjectVersion, Folder, PricingTemplate, TaxRates, EncargoRates } from '@/types'
 import { useAuth } from '@/hooks/use-auth'
+import { supabase } from '@/lib/supabase/client'
 
 interface MainStoreState {
   folders: Folder[]
-  projects: Project[]
+  projects: any[]
   versions: ProjectVersion[]
   templates: PricingTemplate[]
   activeProjectId: string | null
@@ -30,13 +23,24 @@ interface MainStoreState {
   removeProduct: (id: string) => void
   setProducts: (products: Product[]) => void
   createFolder: (name: string) => string
-  createProject: (folderId: string, name: string, templateId?: string) => string
+  createProject: (
+    folderId: string,
+    name: string,
+    templateId?: string,
+    isPublic?: boolean,
+  ) => Promise<string>
   createVersion: (projectId: string, name: string, overrideProducts?: Product[]) => string
   loadVersion: (versionId: string) => void
   deleteVersion: (id: string) => void
-  deleteProject: (id: string) => void
-  deleteFolder: (id: string) => void
-  startNewProject: (folderId: string, pName: string, vName: string, templateId?: string) => void
+  deleteProject: (id: string) => Promise<void>
+  deleteFolder: (id: string) => Promise<void>
+  startNewProject: (
+    folderId: string,
+    pName: string,
+    vName: string,
+    templateId?: string,
+    isPublic?: boolean,
+  ) => Promise<void>
   saveTemplate: (name: string, taxRates: TaxRates, encargoRates: EncargoRates) => void
   deleteTemplate: (id: string) => void
   applySimulationAndSave: (
@@ -54,9 +58,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   const [folders, setFolders] = useState<Folder[]>(() =>
     JSON.parse(localStorage.getItem('p_fld') || '[{"id":"1","name":"Meus Projetos"}]'),
   )
-  const [projects, setProjects] = useState<Project[]>(() =>
-    JSON.parse(localStorage.getItem('p_prj') || '[]'),
-  )
+  const [projects, setProjects] = useState<any[]>([])
   const [versions, setVersions] = useState<ProjectVersion[]>(() =>
     JSON.parse(localStorage.getItem('p_ver') || '[]'),
   )
@@ -79,18 +81,8 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
           difal: p.difal !== undefined ? p.difal : p.st !== undefined ? p.st : 0,
           taxRates: {
             ...p.taxRates,
-            pis:
-              p.taxRates.pis !== undefined
-                ? p.taxRates.pis
-                : p.taxRates.pisCofins
-                  ? p.taxRates.pisCofins * 0.178
-                  : 1.65,
-            cofins:
-              p.taxRates.cofins !== undefined
-                ? p.taxRates.cofins
-                : p.taxRates.pisCofins
-                  ? p.taxRates.pisCofins * 0.822
-                  : 7.6,
+            pis: p.taxRates.pis !== undefined ? p.taxRates.pis : 1.65,
+            cofins: p.taxRates.cofins !== undefined ? p.taxRates.cofins : 7.6,
           },
         }))
       }
@@ -115,12 +107,48 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   )
   const [displayCurrency, setDisplayCurrency] = useState<'BRL' | 'USD'>('BRL')
 
+  // Fetch Projects from Supabase Database
+  useEffect(() => {
+    const fetchDbProjects = async () => {
+      const { data } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (data) {
+        setProjects(
+          data.map((d: any) => ({
+            id: d.id,
+            folderId: d.folder_id || '',
+            name: d.name,
+            templateId: d.template_id || undefined,
+            createdBy: d.owner_id,
+            isPublic: d.is_public,
+            createdAt: d.created_at,
+          })),
+        )
+      }
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        fetchDbProjects()
+      } else {
+        setProjects([])
+      }
+    })
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) fetchDbProjects()
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
   useEffect(() => {
     localStorage.setItem('p_fld', JSON.stringify(folders))
   }, [folders])
-  useEffect(() => {
-    localStorage.setItem('p_prj', JSON.stringify(projects))
-  }, [projects])
   useEffect(() => {
     localStorage.setItem('p_ver', JSON.stringify(versions))
   }, [versions])
@@ -132,19 +160,13 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   }, [lastExchangeUpdate])
 
   useEffect(() => {
-    if (activeProjectId) {
-      localStorage.setItem('p_pid', activeProjectId)
-    } else {
-      localStorage.removeItem('p_pid')
-    }
+    if (activeProjectId) localStorage.setItem('p_pid', activeProjectId)
+    else localStorage.removeItem('p_pid')
   }, [activeProjectId])
 
   useEffect(() => {
-    if (activeVersionId) {
-      localStorage.setItem('p_vid', activeVersionId)
-    } else {
-      localStorage.removeItem('p_vid')
-    }
+    if (activeVersionId) localStorage.setItem('p_vid', activeVersionId)
+    else localStorage.removeItem('p_vid')
   }, [activeVersionId])
 
   const fetchExchangeRate = async () => {
@@ -166,9 +188,45 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     return id
   }
 
-  const createProject = (folderId: string, name: string, templateId?: string) => {
-    const id = Date.now().toString()
-    setProjects((p) => [...p, { id, folderId, name, templateId, createdBy: profile?.id }])
+  const createProject = async (
+    folderId: string,
+    name: string,
+    templateId?: string,
+    isPublic: boolean = false,
+  ) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    const { data, error } = await supabase
+      .from('projects')
+      .insert({
+        name,
+        folder_id: folderId,
+        template_id: templateId,
+        is_public: isPublic,
+        owner_id: user?.id,
+      })
+      .select()
+      .single()
+
+    if (error || !data) {
+      console.error('Error creating project:', error)
+      return ''
+    }
+
+    const id = data.id
+    setProjects((p) => [
+      ...p,
+      {
+        id,
+        folderId,
+        name,
+        templateId,
+        createdBy: user?.id,
+        isPublic: data.is_public,
+        createdAt: data.created_at,
+      },
+    ])
     return id
   }
 
@@ -240,18 +298,8 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
         difal: p.difal !== undefined ? p.difal : p.st !== undefined ? p.st : 0,
         taxRates: {
           ...p.taxRates,
-          pis:
-            p.taxRates.pis !== undefined
-              ? p.taxRates.pis
-              : p.taxRates.pisCofins
-                ? p.taxRates.pisCofins * 0.178
-                : 1.65,
-          cofins:
-            p.taxRates.cofins !== undefined
-              ? p.taxRates.cofins
-              : p.taxRates.pisCofins
-                ? p.taxRates.pisCofins * 0.822
-                : 7.6,
+          pis: p.taxRates.pis !== undefined ? p.taxRates.pis : 1.65,
+          cofins: p.taxRates.cofins !== undefined ? p.taxRates.cofins : 7.6,
         },
       }))
       setProducts(migratedProducts)
@@ -261,17 +309,28 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const startNewProject = (folderId: string, pName: string, vName: string, templateId?: string) => {
-    const pid = createProject(folderId, pName, templateId)
+  const startNewProject = async (
+    folderId: string,
+    pName: string,
+    vName: string,
+    templateId?: string,
+    isPublic?: boolean,
+  ) => {
+    const pid = await createProject(folderId, pName, templateId, isPublic)
+    if (!pid) return
     setPID(pid)
-
     setProducts([])
     createVersion(pid, vName, [])
   }
 
-  const deleteFolder = (id: string) => {
+  const deleteFolder = async (id: string) => {
     setFolders((p) => p.filter((f) => f.id !== id))
     const pids = projects.filter((p) => p.folderId === id).map((p) => p.id)
+
+    for (const pid of pids) {
+      await supabase.from('projects').delete().eq('id', pid)
+    }
+
     setProjects((p) => p.filter((p) => p.folderId !== id))
     setVersions((p) => p.filter((v) => !pids.includes(v.projectId)))
     if (pids.includes(activeProjectId!)) {
@@ -280,7 +339,9 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
       setProducts([])
     }
   }
-  const deleteProject = (id: string) => {
+
+  const deleteProject = async (id: string) => {
+    await supabase.from('projects').delete().eq('id', id)
     setProjects((p) => p.filter((p) => p.id !== id))
     setVersions((p) => p.filter((v) => v.projectId !== id))
     if (activeProjectId === id) {
@@ -289,11 +350,10 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
       setProducts([])
     }
   }
+
   const deleteVersion = (id: string) => {
     setVersions((p) => p.filter((v) => v.id !== id))
-    if (activeVersionId === id) {
-      setVID(null)
-    }
+    if (activeVersionId === id) setVID(null)
   }
 
   const saveTemplate = (name: string, taxRates: TaxRates, encargoRates: EncargoRates) => {

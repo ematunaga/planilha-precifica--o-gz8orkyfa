@@ -12,9 +12,17 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useMainStore } from '@/stores/main'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -24,28 +32,38 @@ export default function Dashboard() {
   const isViewer = profile?.role === 'Viewer' || profile?.role === 'Visualizador'
 
   const [isOpen, setIsOpen] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
   const [folderId, setFolderId] = useState(folders[0]?.id || '')
   const [newFolderName, setNewFolderName] = useState('')
   const [projectName, setProjectName] = useState('')
   const [versionName, setVersionName] = useState('Versão Inicial')
   const [templateId, setTemplateId] = useState('')
+  const [isPublic, setIsPublic] = useState(false)
 
-  const handleCreate = () => {
-    let targetFolder = folderId
-    if (folderId === 'new') {
-      if (!newFolderName.trim()) return
-      targetFolder = createFolder(newFolderName.trim())
+  const handleCreate = async () => {
+    try {
+      setIsCreating(true)
+      let targetFolder = folderId
+      if (folderId === 'new') {
+        if (!newFolderName.trim()) return
+        targetFolder = createFolder(newFolderName.trim())
+      }
+      if (!projectName.trim() || !targetFolder) return
+
+      await startNewProject(
+        targetFolder,
+        projectName.trim(),
+        versionName.trim() || 'Versão Inicial',
+        templateId || undefined,
+        isPublic,
+      )
+      setIsOpen(false)
+      navigate('/precificacao')
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao criar projeto')
+    } finally {
+      setIsCreating(false)
     }
-    if (!projectName.trim() || !targetFolder) return
-
-    startNewProject(
-      targetFolder,
-      projectName.trim(),
-      versionName.trim() || 'Versão Inicial',
-      templateId || undefined,
-    )
-    setIsOpen(false)
-    navigate('/precificacao')
   }
 
   return (
@@ -163,16 +181,34 @@ export default function Dashboard() {
                 placeholder="Versão Inicial"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Visibilidade</Label>
+              <Select
+                value={isPublic ? 'true' : 'false'}
+                onValueChange={(v) => setIsPublic(v === 'true')}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="false">Privado (Apenas eu e Administradores)</SelectItem>
+                  <SelectItem value="true">Público (Todos os usuários podem visualizar)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>
+            <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isCreating}>
               Cancelar
             </Button>
             <Button
               onClick={handleCreate}
-              disabled={!projectName.trim() || (folderId === 'new' && !newFolderName.trim())}
+              disabled={
+                !projectName.trim() || (folderId === 'new' && !newFolderName.trim()) || isCreating
+              }
             >
-              Criar Projeto
+              {isCreating ? 'Criando...' : 'Criar Projeto'}
             </Button>
           </DialogFooter>
         </DialogContent>
