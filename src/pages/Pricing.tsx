@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Save,
@@ -10,6 +10,7 @@ import {
   AlertCircle,
   BookmarkPlus,
   Loader2,
+  Eye,
 } from 'lucide-react'
 import { SummaryCards } from '@/components/pricing/SummaryCards'
 import { PricingTable } from '@/components/pricing/PricingTable'
@@ -37,6 +38,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { calculateFinancials } from '@/lib/calculations'
 import { ProjectVersion } from '@/types'
@@ -55,10 +57,13 @@ export default function Pricing() {
     projects,
     folders,
     versions,
+    proposalConditions,
+    proposals,
     createVersion,
     loadVersion,
     deleteVersion,
     saveTemplate,
+    saveProposalRecord,
   } = useMainStore()
 
   const { profile } = useAuth()
@@ -71,6 +76,7 @@ export default function Pricing() {
 
   const [printMode, setPrintMode] = useState<'internal' | 'proposal'>('internal')
   const [isProposalOpen, setIsProposalOpen] = useState(false)
+  const [proposalMeta, setProposalMeta] = useState({ fileName: '', propNum: 773, verNum: 1 })
   const [clientData, setClientData] = useState({
     company: '',
     cnpj: '',
@@ -78,13 +84,16 @@ export default function Pricing() {
     contact: '',
     phone: '',
     email: '',
-    proposalNumber: `PROP-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)}`,
+    proposalNumber: '',
     deliveryTime: '30 a 45 dias úteis',
     conditions: '',
   })
 
   useEffect(() => {
-    const handleAfterPrint = () => setPrintMode('internal')
+    const handleAfterPrint = () => {
+      setPrintMode('internal')
+      document.title = 'Planilha de Precificação' // reset title
+    }
     window.addEventListener('afterprint', handleAfterPrint)
     return () => window.removeEventListener('afterprint', handleAfterPrint)
   }, [])
@@ -104,42 +113,127 @@ export default function Pricing() {
     return false
   }
 
+  // Pre-compute proposal file name and numbers when dialog opens
+  useEffect(() => {
+    if (isProposalOpen && activeProjectId) {
+      const projectProposals = proposals.filter((p) => p.projectId === activeProjectId)
+      let propNum = 773
+      let verNum = 1
+
+      if (projectProposals.length > 0) {
+        propNum = projectProposals[0].proposalNumber
+        verNum = Math.max(...projectProposals.map((p) => p.versionNumber)) + 1
+      } else {
+        if (proposals.length > 0) {
+          propNum = Math.max(...proposals.map((p) => p.proposalNumber)) + 1
+        }
+      }
+
+      setProposalMeta((prev) => ({ ...prev, propNum, verNum }))
+    }
+  }, [isProposalOpen, activeProjectId, proposals])
+
+  // Update dynamic file name when company name or numbers change
+  useEffect(() => {
+    const mf = products[0]?.manufacturer?.toUpperCase() || ''
+    let X = 'O'
+    if (mf.includes('HUAWEI')) X = 'H'
+    else if (mf.includes('ACRONIS')) X = 'A'
+    else if (mf.includes('AWS')) X = 'AWS'
+    else if (mf.includes('FORTINET')) X = 'F'
+
+    const d = new Date()
+    const yy = d.getFullYear().toString().slice(-2)
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    const dateStr = `${yy}${mm}${dd}`
+
+    const safeCompany = (clientData.company || 'Cliente').replace(/[^a-zA-Z0-9]/g, '')
+    const fileName = `Promp${X}_${safeCompany}_${dateStr}_${proposalMeta.propNum}_V${String(proposalMeta.verNum).padStart(2, '0')}`
+
+    setProposalMeta((prev) => ({ ...prev, fileName }))
+    setClientData((prev) => ({
+      ...prev,
+      proposalNumber: `${proposalMeta.propNum}/V${String(proposalMeta.verNum).padStart(2, '0')}`,
+    }))
+  }, [clientData.company, proposalMeta.propNum, proposalMeta.verNum, products])
+
   const handleOpenProposal = () => {
+    if (!activeProjectId) {
+      toast.error('Salve o projeto antes de gerar uma proposta.')
+      return
+    }
+
     if (!clientData.conditions) {
       const models = Array.from(new Set(products.map((p) => p.salesModel)))
       const distributors = Array.from(new Set(products.map((p) => p.distributor).filter(Boolean)))
 
-      let conds = `1. Validade da Proposta: 5 dias úteis a partir da emissão.\n`
-      conds += `2. Prazo de Entrega: ${clientData.deliveryTime}.\n`
-      conds += `3. Impostos: Inclusos conforme legislação vigente.\n`
+      let conds = ''
 
-      if (models.includes('Channel')) {
-        const distText = distributors.length > 0 ? ` (${distributors.join(', ')})` : ''
-        conds += `4. Faturamento: Direto ao cliente pelo distribuidor${distText}.\n`
-      } else {
-        conds += `4. Faturamento: Faturamento direto pela Leap IT.\n`
+      // Attempt to load specific distributor conditions
+      if (distributors.length > 0) {
+        const distCond = proposalConditions.find(
+          (c) =>
+            c.type === 'distributor' &&
+            distributors.some((d) => d.toLowerCase().includes(c.name.toLowerCase())),
+        )
+        if (distCond) {
+          conds += distCond.content + '\n\n'
+        }
       }
-      conds += `5. Pagamento: A definir mediante análise de crédito.`
 
-      setClientData((prev) => ({ ...prev, conditions: conds }))
+      // Append Leap IT condition if channel
+      if (models.includes('Channel')) {
+        const leapCond = proposalConditions.find((c) => c.type === 'leapit')
+        if (leapCond) {
+          conds += leapCond.content
+        } else {
+          conds += `Condições adicionais Leap IT (Canal):\nFaturamento direto ao cliente pelo distribuidor.`
+        }
+      }
+
+      // Fallback default
+      if (!conds) {
+        conds = `1. Validade da Proposta: 5 dias úteis a partir da emissão.\n2. Prazo de Entrega: ${clientData.deliveryTime}.\n3. Impostos: Inclusos conforme legislação vigente.\n4. Pagamento: A definir mediante análise de crédito.`
+      }
+
+      setClientData((prev) => ({ ...prev, conditions: conds.trim() }))
     }
     setIsProposalOpen(true)
   }
 
-  const handleGeneratePDF = () => {
+  const handleGeneratePDF = async () => {
     if (!clientData.company) {
       toast.error('Por favor, preencha o nome da empresa do cliente.')
       return
     }
+
+    // Save Proposal Record
+    if (activeProjectId) {
+      await saveProposalRecord({
+        projectId: activeProjectId,
+        versionId: activeVersionId || undefined,
+        fileName: proposalMeta.fileName,
+        proposalNumber: proposalMeta.propNum,
+        versionNumber: proposalMeta.verNum,
+        clientName: clientData.company,
+      })
+    }
+
     setIsProposalOpen(false)
     setPrintMode('proposal')
+
+    // Set document title for PDF file name
+    document.title = proposalMeta.fileName
+
     setTimeout(() => {
       window.print()
-    }, 300)
+    }, 500)
   }
 
   const handlePrintInternal = () => {
     setPrintMode('internal')
+    document.title = `${activeProject?.name || 'Precificacao'} - Visao Interna`
     setTimeout(() => window.print(), 100)
   }
 
@@ -455,109 +549,155 @@ export default function Pricing() {
       </Dialog>
 
       <Dialog open={isProposalOpen} onOpenChange={setIsProposalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Gerar Proposta Comercial</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>
-                  Empresa <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  value={clientData.company}
-                  onChange={(e) => setClientData({ ...clientData, company: e.target.value })}
-                  placeholder="Nome do cliente"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>CNPJ</Label>
-                <Input
-                  value={clientData.cnpj}
-                  onChange={(e) => setClientData({ ...clientData, cnpj: e.target.value })}
-                  placeholder="00.000.000/0000-00"
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Endereço</Label>
-                <Input
-                  value={clientData.address}
-                  onChange={(e) => setClientData({ ...clientData, address: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Contato (Nome)</Label>
-                <Input
-                  value={clientData.contact}
-                  onChange={(e) => setClientData({ ...clientData, contact: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Telefone</Label>
-                <Input
-                  value={clientData.phone}
-                  onChange={(e) => setClientData({ ...clientData, phone: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={clientData.email}
-                  onChange={(e) => setClientData({ ...clientData, email: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t">
-              <div className="space-y-2">
-                <Label>Número da Proposta</Label>
-                <Input
-                  value={clientData.proposalNumber}
-                  onChange={(e) => setClientData({ ...clientData, proposalNumber: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Prazo de Entrega</Label>
-                <Input
-                  value={clientData.deliveryTime}
-                  onChange={(e) => setClientData({ ...clientData, deliveryTime: e.target.value })}
-                  onBlur={(e) => {
-                    if (clientData.conditions.includes('Prazo de Entrega:')) {
-                      setClientData((prev) => ({
-                        ...prev,
-                        conditions: prev.conditions.replace(
-                          /Prazo de Entrega:.*?\./,
-                          `Prazo de Entrega: ${e.target.value}.`,
-                        ),
-                      }))
-                    }
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2 mt-4 pt-4 border-t">
-              <Label>Condições Gerais de Fornecimento</Label>
-              <Textarea
-                value={clientData.conditions}
-                onChange={(e) => setClientData({ ...clientData, conditions: e.target.value })}
-                className="min-h-[120px]"
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Revise os termos gerados automaticamente com base no modelo de venda dos produtos
-                selecionados.
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <div className="p-6 border-b shrink-0 flex items-center justify-between bg-muted/30">
+            <div>
+              <DialogTitle className="text-xl">Gerar Proposta Comercial</DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Arquivo:{' '}
+                <span className="font-mono text-xs font-semibold text-primary">
+                  {proposalMeta.fileName}.pdf
+                </span>
               </p>
             </div>
           </div>
-          <DialogFooter>
+
+          <div className="flex-1 overflow-y-auto">
+            <Tabs defaultValue="edit" className="w-full h-full flex flex-col">
+              <div className="px-6 pt-4 shrink-0">
+                <TabsList className="w-full grid grid-cols-2">
+                  <TabsTrigger value="edit">
+                    <FileText className="h-4 w-4 mr-2" /> Dados & Condições
+                  </TabsTrigger>
+                  <TabsTrigger value="preview">
+                    <Eye className="h-4 w-4 mr-2" /> Pré-visualização
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="edit" className="flex-1 p-6 m-0 border-none space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>
+                      Empresa <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      value={clientData.company}
+                      onChange={(e) => setClientData({ ...clientData, company: e.target.value })}
+                      placeholder="Nome do cliente"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>CNPJ</Label>
+                    <Input
+                      value={clientData.cnpj}
+                      onChange={(e) => setClientData({ ...clientData, cnpj: e.target.value })}
+                      placeholder="00.000.000/0000-00"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Endereço</Label>
+                    <Input
+                      value={clientData.address}
+                      onChange={(e) => setClientData({ ...clientData, address: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Contato (Nome)</Label>
+                    <Input
+                      value={clientData.contact}
+                      onChange={(e) => setClientData({ ...clientData, contact: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Telefone</Label>
+                    <Input
+                      value={clientData.phone}
+                      onChange={(e) => setClientData({ ...clientData, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      value={clientData.email}
+                      onChange={(e) => setClientData({ ...clientData, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label>Número da Proposta (Ref)</Label>
+                    <Input value={clientData.proposalNumber} disabled className="bg-muted" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Prazo de Entrega</Label>
+                    <Input
+                      value={clientData.deliveryTime}
+                      onChange={(e) =>
+                        setClientData({ ...clientData, deliveryTime: e.target.value })
+                      }
+                      onBlur={(e) => {
+                        if (clientData.conditions.includes('Prazo de Entrega:')) {
+                          setClientData((prev) => ({
+                            ...prev,
+                            conditions: prev.conditions.replace(
+                              /Prazo de Entrega:.*?\./,
+                              `Prazo de Entrega: ${e.target.value}.`,
+                            ),
+                          }))
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 mt-4 pt-4 border-t">
+                  <Label>Condições Gerais de Fornecimento</Label>
+                  <Textarea
+                    value={clientData.conditions}
+                    onChange={(e) => setClientData({ ...clientData, conditions: e.target.value })}
+                    className="min-h-[160px] text-xs font-mono"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Estas condições foram pré-carregadas com base nos distribuidores e modelos de
+                    venda selecionados. Você pode alterá-las livremente para esta proposta.
+                  </p>
+                </div>
+              </TabsContent>
+
+              <TabsContent
+                value="preview"
+                className="flex-1 m-0 p-6 bg-slate-100 overflow-hidden flex flex-col"
+              >
+                <p className="text-xs text-center text-slate-500 mb-4 shrink-0">
+                  A visualização pode diferir levemente do PDF final gerado pelo navegador.
+                </p>
+                <div className="flex-1 overflow-y-auto border border-slate-300 shadow-xl rounded-sm bg-white mx-auto w-full max-w-[210mm] relative custom-scrollbar">
+                  <div className="origin-top scale-[0.75] sm:scale-90 md:scale-100 w-[210mm] absolute left-1/2 -translate-x-1/2 top-0">
+                    <ProposalDocument
+                      clientData={clientData}
+                      products={products}
+                      exchangeRate={exchangeRate}
+                      displayCurrency={displayCurrency}
+                      profile={profile}
+                      isPreview={true}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <DialogFooter className="p-6 border-t bg-muted/30 shrink-0">
             <Button variant="outline" onClick={() => setIsProposalOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={handleGeneratePDF}>
               <FileText className="h-4 w-4 mr-2" />
-              Gerar PDF
+              Gerar & Salvar PDF
             </Button>
           </DialogFooter>
         </DialogContent>

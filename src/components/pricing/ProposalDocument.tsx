@@ -2,6 +2,7 @@ import { Product } from '@/types'
 import { calculateFinancials } from '@/lib/calculations'
 import { formatCurrency } from '@/lib/formatters'
 import { Profile } from '@/hooks/use-auth'
+import { cn } from '@/lib/utils'
 
 interface ProposalDocumentProps {
   clientData: any
@@ -9,6 +10,7 @@ interface ProposalDocumentProps {
   exchangeRate: number
   displayCurrency: 'BRL' | 'USD'
   profile: Profile | null
+  isPreview?: boolean
 }
 
 export function ProposalDocument({
@@ -17,6 +19,7 @@ export function ProposalDocument({
   exchangeRate,
   displayCurrency,
   profile,
+  isPreview = false,
 }: ProposalDocumentProps) {
   const total = products.reduce((acc, p) => {
     const f = calculateFinancials(p, exchangeRate)
@@ -24,7 +27,12 @@ export function ProposalDocument({
   }, 0)
 
   return (
-    <div className="max-w-[210mm] mx-auto p-12 bg-white text-slate-900 font-sans print:p-0 print:max-w-none print:w-full">
+    <div
+      className={cn(
+        'w-[210mm] min-h-[297mm] mx-auto p-[20mm] bg-white text-slate-900 font-sans box-border relative',
+        !isPreview && 'print:p-[15mm] print:m-0 print:w-full print:min-h-0 print:shadow-none',
+      )}
+    >
       {/* HEADER */}
       <div className="flex justify-between items-start mb-10">
         <div className="flex items-center gap-4">
@@ -41,7 +49,10 @@ export function ProposalDocument({
         <div className="text-right">
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">PROPOSTA COMERCIAL</h2>
           <p className="text-sm text-slate-600 mt-2">
-            Nº: <span className="font-bold text-slate-800">{clientData.proposalNumber}</span>
+            Nº:{' '}
+            <span className="font-bold text-slate-800">
+              {clientData.proposalNumber || 'Rascunho'}
+            </span>
           </p>
           <p className="text-sm text-slate-600">
             Data:{' '}
@@ -53,7 +64,7 @@ export function ProposalDocument({
       </div>
 
       {/* CLIENT INFO */}
-      <div className="border-2 border-slate-200 rounded-xl p-5 mb-10 bg-slate-50/50 print:border-slate-300">
+      <div className="border-2 border-slate-200 rounded-xl p-5 mb-10 bg-slate-50/50 print:border-slate-300 print:bg-transparent">
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">
           Dados do Cliente
         </h3>
@@ -92,13 +103,13 @@ export function ProposalDocument({
         </h3>
         <table className="w-full text-sm text-left border-collapse">
           <thead>
-            <tr className="bg-slate-100 border-y-2 border-slate-300 text-slate-700">
-              <th className="py-3 px-2 font-semibold w-12 text-center">Item</th>
+            <tr className="bg-slate-100 border-y-2 border-slate-300 text-slate-700 print:bg-transparent print:border-b-2 print:border-t-2">
+              <th className="py-3 px-2 font-semibold w-10 text-center">Item</th>
               <th className="py-3 px-2 font-semibold">Produto / PN</th>
               <th className="py-3 px-2 font-semibold">Descrição</th>
-              <th className="py-3 px-2 font-semibold text-center w-16">Qtd</th>
-              <th className="py-3 px-2 font-semibold text-right w-28">Vlr. Unit</th>
-              <th className="py-3 px-2 font-semibold text-right w-32">Total</th>
+              <th className="py-3 px-2 font-semibold text-center w-12">Qtd</th>
+              <th className="py-3 px-2 font-semibold text-right w-24">Vlr. Unit</th>
+              <th className="py-3 px-2 font-semibold text-right w-28">Total</th>
             </tr>
           </thead>
           <tbody className="text-slate-700">
@@ -107,17 +118,17 @@ export function ProposalDocument({
               const unit = displayCurrency === 'USD' ? f.unitSalePriceUsd : f.unitSalePrice
               const tot = displayCurrency === 'USD' ? f.totalSalePriceUsd : f.totalSalePrice
               return (
-                <tr key={p.id} className="border-b border-slate-200 last:border-0">
+                <tr key={p.id} className="border-b border-slate-200 last:border-0 print:border-b">
                   <td className="py-3 px-2 text-center text-slate-500 font-medium">{i + 1}</td>
-                  <td className="py-3 px-2 font-semibold text-slate-900">{p.pn}</td>
-                  <td className="py-3 px-2 text-xs leading-relaxed max-w-[250px]">
+                  <td className="py-3 px-2 font-semibold text-slate-900 break-all">{p.pn}</td>
+                  <td className="py-3 px-2 text-xs leading-relaxed max-w-[200px] break-words">
                     {p.description}
                   </td>
                   <td className="py-3 px-2 text-center font-medium">{p.qty}</td>
-                  <td className="py-3 px-2 text-right tabular-nums">
+                  <td className="py-3 px-2 text-right tabular-nums whitespace-nowrap">
                     {formatCurrency(unit, displayCurrency)}
                   </td>
-                  <td className="py-3 px-2 text-right font-semibold text-slate-900 tabular-nums">
+                  <td className="py-3 px-2 text-right font-semibold text-slate-900 tabular-nums whitespace-nowrap">
                     {formatCurrency(tot, displayCurrency)}
                   </td>
                 </tr>
@@ -125,12 +136,12 @@ export function ProposalDocument({
             })}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-slate-300 bg-slate-50">
+            <tr className="border-t-2 border-slate-300 bg-slate-50 print:bg-transparent">
               <td colSpan={4}></td>
-              <td className="py-4 px-2 text-right font-bold text-slate-700 uppercase tracking-wide text-xs">
+              <td className="py-4 px-2 text-right font-bold text-slate-700 uppercase tracking-wide text-[10px] whitespace-nowrap">
                 Total Geral:
               </td>
-              <td className="py-4 px-2 text-right font-bold text-slate-900 text-lg tabular-nums">
+              <td className="py-4 px-2 text-right font-bold text-slate-900 text-base tabular-nums whitespace-nowrap">
                 {formatCurrency(total, displayCurrency)}
               </td>
             </tr>
@@ -143,13 +154,13 @@ export function ProposalDocument({
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">
           Condições Gerais de Fornecimento
         </h3>
-        <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200">
+        <div className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200 print:bg-transparent print:border-none print:p-0">
           {clientData.conditions}
         </div>
       </div>
 
-      {/* FOOTER */}
-      <div className="mt-16 pt-6 border-t-2 border-slate-200 text-xs text-slate-500 flex justify-between items-end">
+      {/* FOOTER - absolutely positioned at bottom of A4 if possible, or just normal flow if content is long */}
+      <div className="mt-16 pt-6 border-t-2 border-slate-200 text-xs text-slate-500 flex justify-between items-end print:break-inside-avoid">
         <div className="space-y-1">
           <p className="font-bold text-slate-700 text-sm">Leap IT - Soluções em Tecnologia</p>
           <p>Av. Paulista, 1000 - Bela Vista, São Paulo - SP</p>
@@ -165,6 +176,24 @@ export function ProposalDocument({
           <p>{profile?.email || ''}</p>
         </div>
       </div>
+
+      {/* Global Print Styles Injection */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
+          body {
+            margin: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .no-print, .print\\:hidden {
+            display: none !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

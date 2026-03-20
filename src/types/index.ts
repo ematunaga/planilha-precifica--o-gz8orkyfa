@@ -74,6 +74,7 @@ export interface Project {
   name: string
   templateId?: string
   createdBy?: string
+  isPublic?: boolean
 }
 
 export interface PricingTemplate {
@@ -90,5 +91,24 @@ export interface ProjectVersion {
   date: string
   products: Product[]
   exchangeRate: number
+  createdBy?: string
+}
+
+export interface ProposalCondition {
+  id: string
+  name: string
+  content: string
+  type: 'distributor' | 'leapit'
+}
+
+export interface ProposalRecord {
+  id: string
+  projectId: string
+  versionId?: string
+  fileName: string
+  proposalNumber: number
+  versionNumber: number
+  clientName: string
+  createdAt: string
   createdBy?: string
 }

@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Folder, FolderPlus, FileText, ChevronRight, Trash2, Lock, Globe } from 'lucide-react'
+import {
+  Folder,
+  FolderPlus,
+  FileText,
+  ChevronRight,
+  Trash2,
+  Lock,
+  Globe,
+  FileOutput,
+} from 'lucide-react'
 import { useMainStore } from '@/stores/main'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
@@ -15,6 +24,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Folder as FolderType, ProjectVersion } from '@/types'
@@ -24,11 +39,13 @@ export default function Projetos() {
     folders,
     projects,
     versions,
+    proposals,
     createFolder,
     deleteFolder,
     deleteProject,
     deleteVersion,
     loadVersion,
+    deleteProposalRecord,
   } = useMainStore()
   const { profile } = useAuth()
   const navigate = useNavigate()
@@ -80,7 +97,7 @@ export default function Projetos() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Meus Projetos</h2>
         <p className="text-muted-foreground">
-          Gerencie suas pastas, projetos e histórico de versões.
+          Gerencie suas pastas, projetos e histórico de versões e propostas.
         </p>
       </div>
 
@@ -168,6 +185,11 @@ export default function Projetos() {
                 const projectVersions = versions
                   .filter((v) => v.projectId === project.id)
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+                const projectProposals = proposals
+                  .filter((p) => p.projectId === project.id)
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
                 return (
                   <Card key={project.id} className="shadow-subtle overflow-hidden flex flex-col">
                     <CardHeader className="bg-muted/10 pb-4 border-b flex flex-row items-start justify-between space-y-0">
@@ -191,7 +213,8 @@ export default function Projetos() {
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {projectVersions.length} versão(ões) salva(s)
+                          {projectVersions.length} versão(ões) • {projectProposals.length}{' '}
+                          proposta(s)
                         </p>
                       </div>
                       {canDeleteProject(project) && (
@@ -209,53 +232,115 @@ export default function Projetos() {
                       )}
                     </CardHeader>
                     <CardContent className="p-0 flex-1 flex flex-col">
-                      {projectVersions.length === 0 ? (
-                        <div className="p-6 text-sm text-center text-muted-foreground">
-                          Nenhuma versão salva para este projeto.
-                        </div>
-                      ) : (
-                        <div className="divide-y">
-                          {projectVersions.map((v, i) => (
-                            <div
-                              key={v.id}
-                              className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
-                            >
-                              <div>
-                                <div className="font-medium text-sm flex items-center gap-2">
-                                  {v.name}
-                                  {i === 0 && (
-                                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
-                                      Mais Recente
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-xs text-muted-foreground mt-0.5">
-                                  {new Date(v.date).toLocaleString()}
-                                </div>
+                      <Accordion type="multiple" className="w-full" defaultValue={['versions']}>
+                        <AccordionItem value="versions" className="border-b-0">
+                          <AccordionTrigger className="px-4 py-3 text-sm font-medium hover:bg-muted/20 hover:no-underline">
+                            Versões Salvas
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-0">
+                            {projectVersions.length === 0 ? (
+                              <div className="p-4 text-xs text-center text-muted-foreground border-t">
+                                Nenhuma versão salva.
                               </div>
-                              <div className="flex items-center gap-2">
-                                {canDeleteVersion(v) && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                    onClick={() => deleteVersion(v.id)}
+                            ) : (
+                              <div className="divide-y border-t">
+                                {projectVersions.map((v, i) => (
+                                  <div
+                                    key={v.id}
+                                    className="p-3 px-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
                                   >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => handleLoadVersion(v.id)}
-                                >
-                                  Abrir <ChevronRight className="ml-1 h-3 w-3" />
-                                </Button>
+                                    <div>
+                                      <div className="font-medium text-sm flex items-center gap-2">
+                                        {v.name}
+                                        {i === 0 && (
+                                          <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
+                                            Mais Recente
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground mt-0.5">
+                                        {new Date(v.date).toLocaleString()}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {canDeleteVersion(v) && (
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                          onClick={() => deleteVersion(v.id)}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        className="h-7 text-xs"
+                                        onClick={() => handleLoadVersion(v.id)}
+                                      >
+                                        Abrir <ChevronRight className="ml-1 h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+
+                        <AccordionItem value="proposals" className="border-b-0">
+                          <AccordionTrigger className="px-4 py-3 text-sm font-medium border-t hover:bg-muted/20 hover:no-underline">
+                            Propostas Geradas ({projectProposals.length})
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-0">
+                            {projectProposals.length === 0 ? (
+                              <div className="p-4 text-xs text-center text-muted-foreground border-t bg-muted/10">
+                                Nenhuma proposta gerada para este projeto.
+                              </div>
+                            ) : (
+                              <div className="divide-y border-t bg-muted/5">
+                                {projectProposals.map((prop) => (
+                                  <div
+                                    key={prop.id}
+                                    className="p-3 px-4 flex items-center justify-between group"
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <FileOutput className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                      <div>
+                                        <div className="font-mono text-xs font-semibold text-primary/80">
+                                          {prop.fileName}.pdf
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground mt-0.5 flex gap-2">
+                                          <span>Cliente: {prop.clientName}</span>
+                                          <span>•</span>
+                                          <span>{new Date(prop.createdAt).toLocaleString()}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      {canDeleteProject(project) && (
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                                          onClick={async () => {
+                                            await deleteProposalRecord(prop.id)
+                                            toast.success('Registro de proposta excluído')
+                                          }}
+                                          title="Excluir Registro"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
                     </CardContent>
                   </Card>
                 )

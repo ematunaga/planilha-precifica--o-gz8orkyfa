@@ -1,5 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { Product, ProjectVersion, Folder, PricingTemplate, TaxRates, EncargoRates } from '@/types'
+import {
+  Product,
+  ProjectVersion,
+  Folder,
+  PricingTemplate,
+  TaxRates,
+  EncargoRates,
+  ProposalCondition,
+  ProposalRecord,
+} from '@/types'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 
@@ -8,6 +17,8 @@ interface MainStoreState {
   projects: any[]
   versions: ProjectVersion[]
   templates: PricingTemplate[]
+  proposalConditions: ProposalCondition[]
+  proposals: ProposalRecord[]
   activeProjectId: string | null
   activeVersionId: string | null
   products: Product[]
@@ -48,6 +59,10 @@ interface MainStoreState {
     preSimName: string,
     simName: string,
   ) => { preSimId: string; simId: string; preSimProducts: Product[]; simProducts: Product[] } | void
+  saveProposalCondition: (condition: Omit<ProposalCondition, 'id'>, id?: string) => Promise<void>
+  deleteProposalCondition: (id: string) => Promise<void>
+  saveProposalRecord: (record: Omit<ProposalRecord, 'id' | 'createdAt'>) => Promise<void>
+  deleteProposalRecord: (id: string) => Promise<void>
 }
 
 const MainStoreContext = createContext<MainStoreState | null>(null)
@@ -65,6 +80,9 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   const [templates, setTemplates] = useState<PricingTemplate[]>(() =>
     JSON.parse(localStorage.getItem('p_tpl') || '[]'),
   )
+  const [proposalConditions, setProposalConditions] = useState<ProposalCondition[]>([])
+  const [proposals, setProposals] = useState<ProposalRecord[]>([])
+
   const [activeProjectId, setPID] = useState<string | null>(() => localStorage.getItem('p_pid'))
   const [activeVersionId, setVID] = useState<string | null>(() => localStorage.getItem('p_vid'))
 
@@ -107,16 +125,18 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   )
   const [displayCurrency, setDisplayCurrency] = useState<'BRL' | 'USD'>('BRL')
 
-  // Fetch Projects from Supabase Database
+  // Fetch Projects and extra data from Supabase Database
   useEffect(() => {
-    const fetchDbProjects = async () => {
-      const { data } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (data) {
+    const fetchDbData = async () => {
+      const [{ data: projData }, { data: condData }, { data: propData }] = await Promise.all([
+        supabase.from('projects').select('*').order('created_at', { ascending: false }),
+        supabase.from('proposal_conditions').select('*'),
+        supabase.from('proposals').select('*').order('created_at', { ascending: false }),
+      ])
+
+      if (projData) {
         setProjects(
-          data.map((d: any) => ({
+          projData.map((d: any) => ({
             id: d.id,
             folderId: d.folder_id || '',
             name: d.name,
@@ -127,20 +147,49 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
           })),
         )
       }
+
+      if (condData) {
+        setProposalConditions(
+          condData.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            content: c.content,
+            type: c.type,
+          })),
+        )
+      }
+
+      if (propData) {
+        setProposals(
+          propData.map((p: any) => ({
+            id: p.id,
+            projectId: p.project_id,
+            versionId: p.version_id,
+            fileName: p.file_name,
+            proposalNumber: p.proposal_number,
+            versionNumber: p.version_number,
+            clientName: p.client_name,
+            createdAt: p.created_at,
+            createdBy: p.created_by,
+          })),
+        )
+      }
     }
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        fetchDbProjects()
+        fetchDbData()
       } else {
         setProjects([])
+        setProposalConditions([])
+        setProposals([])
       }
     })
 
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) fetchDbProjects()
+      if (data.session?.user) fetchDbData()
     })
 
     return () => subscription.unsubscribe()
@@ -367,11 +416,84 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
   const addProducts = (newProducts: Product[]) => setProducts((p) => [...newProducts, ...p])
   const removeProduct = (id: string) => setProducts((p) => p.filter((x) => x.id !== id))
 
+  const saveProposalCondition = async (condition: Omit<ProposalCondition, 'id'>, id?: string) => {
+    if (id) {
+      const { error } = await supabase
+        .from('proposal_conditions')
+        .update(condition as any)
+        .eq('id', id)
+      if (!error) {
+        setProposalConditions((p) => p.map((c) => (c.id === id ? { ...c, ...condition } : c)))
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('proposal_conditions')
+        .insert(condition as any)
+        .select()
+        .single()
+      if (data && !error) {
+        setProposalConditions((p) => [
+          ...p,
+          { id: data.id, name: data.name, content: data.content, type: data.type },
+        ])
+      }
+    }
+  }
+
+  const deleteProposalCondition = async (id: string) => {
+    const { error } = await supabase.from('proposal_conditions').delete().eq('id', id)
+    if (!error) {
+      setProposalConditions((p) => p.filter((c) => c.id !== id))
+    }
+  }
+
+  const saveProposalRecord = async (record: Omit<ProposalRecord, 'id' | 'createdAt'>) => {
+    const { data, error } = await supabase
+      .from('proposals')
+      .insert({
+        project_id: record.projectId,
+        version_id: record.versionId,
+        file_name: record.fileName,
+        proposal_number: record.proposalNumber,
+        version_number: record.versionNumber,
+        client_name: record.clientName,
+        created_by: profile?.id,
+      } as any)
+      .select()
+      .single()
+
+    if (data && !error) {
+      setProposals((p) => [
+        {
+          id: data.id,
+          projectId: data.project_id,
+          versionId: data.version_id,
+          fileName: data.file_name,
+          proposalNumber: data.proposal_number,
+          versionNumber: data.version_number,
+          clientName: data.client_name,
+          createdAt: data.created_at,
+          createdBy: data.created_by,
+        },
+        ...p,
+      ])
+    }
+  }
+
+  const deleteProposalRecord = async (id: string) => {
+    const { error } = await supabase.from('proposals').delete().eq('id', id)
+    if (!error) {
+      setProposals((p) => p.filter((pr) => pr.id !== id))
+    }
+  }
+
   const store = {
     folders,
     projects,
     versions,
     templates,
+    proposalConditions,
+    proposals,
     activeProjectId,
     activeVersionId,
     products,
@@ -397,6 +519,10 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
     saveTemplate,
     deleteTemplate,
     applySimulationAndSave,
+    saveProposalCondition,
+    deleteProposalCondition,
+    saveProposalRecord,
+    deleteProposalRecord,
   }
   return React.createElement(MainStoreContext.Provider, { value: store }, children)
 }
