@@ -171,6 +171,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
             clientName: p.client_name,
             createdAt: p.created_at,
             createdBy: p.created_by,
+            content: p.content,
           })),
         )
       }
@@ -458,6 +459,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
         version_number: record.versionNumber,
         client_name: record.clientName,
         created_by: profile?.id,
+        content: record.content,
       } as any)
       .select()
       .single()
@@ -474,6 +476,7 @@ export function MainStoreProvider({ children }: { children: ReactNode }) {
           clientName: data.client_name,
           createdAt: data.created_at,
           createdBy: data.created_by,
+          content: data.content,
         },
         ...p,
       ])

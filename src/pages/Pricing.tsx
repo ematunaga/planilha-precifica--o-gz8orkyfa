@@ -11,6 +11,8 @@ import {
   BookmarkPlus,
   Loader2,
   Eye,
+  FileStack,
+  Printer,
 } from 'lucide-react'
 import { SummaryCards } from '@/components/pricing/SummaryCards'
 import { PricingTable } from '@/components/pricing/PricingTable'
@@ -27,6 +29,14 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { useMainStore } from '@/stores/main'
 import { useAuth } from '@/hooks/use-auth'
 import {
@@ -41,7 +51,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 import { calculateFinancials } from '@/lib/calculations'
-import { ProjectVersion } from '@/types'
+import { ProjectVersion, ProposalRecord } from '@/types'
 import { savePricingItems } from '@/services/pricing_items'
 import { cn } from '@/lib/utils'
 
@@ -64,6 +74,7 @@ export default function Pricing() {
     deleteVersion,
     saveTemplate,
     saveProposalRecord,
+    deleteProposalRecord,
   } = useMainStore()
 
   const { profile } = useAuth()
@@ -74,8 +85,11 @@ export default function Pricing() {
   const [templateName, setTemplateName] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
-  const [printMode, setPrintMode] = useState<'internal' | 'proposal'>('internal')
+  const [printMode, setPrintMode] = useState<'internal' | 'proposal' | 'reprint'>('internal')
+  const [reprintData, setReprintData] = useState<ProposalRecord | null>(null)
   const [isProposalOpen, setIsProposalOpen] = useState(false)
+  const [isProposalsHistoryOpen, setIsProposalsHistoryOpen] = useState(false)
+
   const [proposalMeta, setProposalMeta] = useState({ fileName: '', propNum: 773, verNum: 1 })
   const [clientData, setClientData] = useState({
     company: '',
@@ -92,6 +106,7 @@ export default function Pricing() {
   useEffect(() => {
     const handleAfterPrint = () => {
       setPrintMode('internal')
+      setReprintData(null)
       document.title = 'Planilha de Precificação' // reset title
     }
     window.addEventListener('afterprint', handleAfterPrint)
@@ -105,6 +120,10 @@ export default function Pricing() {
     .filter((v) => v.projectId === activeProjectId)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
+  const projectProposals = proposals
+    .filter((p) => p.projectId === activeProjectId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
   const isViewer = profile?.role === 'Viewer' || profile?.role === 'Visualizador'
 
   const canDeleteVersion = (v: ProjectVersion) => {
@@ -113,10 +132,15 @@ export default function Pricing() {
     return false
   }
 
+  const canDeleteProposal = (p: ProposalRecord) => {
+    if (profile?.role === 'Admin') return true
+    if (profile?.role === 'Editor') return p.createdBy === profile?.id
+    return false
+  }
+
   // Pre-compute proposal file name and numbers when dialog opens
   useEffect(() => {
     if (isProposalOpen && activeProjectId) {
-      const projectProposals = proposals.filter((p) => p.projectId === activeProjectId)
       let propNum = 773
       let verNum = 1
 
@@ -131,7 +155,7 @@ export default function Pricing() {
 
       setProposalMeta((prev) => ({ ...prev, propNum, verNum }))
     }
-  }, [isProposalOpen, activeProjectId, proposals])
+  }, [isProposalOpen, activeProjectId, proposals, projectProposals])
 
   // Update dynamic file name when company name or numbers change
   useEffect(() => {
@@ -154,7 +178,7 @@ export default function Pricing() {
     setProposalMeta((prev) => ({ ...prev, fileName }))
     setClientData((prev) => ({
       ...prev,
-      proposalNumber: `${proposalMeta.propNum}/V${String(proposalMeta.verNum).padStart(2, '0')}`,
+      proposalNumber: fileName,
     }))
   }, [clientData.company, proposalMeta.propNum, proposalMeta.verNum, products])
 
@@ -217,7 +241,15 @@ export default function Pricing() {
         proposalNumber: proposalMeta.propNum,
         versionNumber: proposalMeta.verNum,
         clientName: clientData.company,
+        content: {
+          clientData,
+          products,
+          exchangeRate,
+          displayCurrency,
+          profile,
+        },
       })
+      toast.success('Proposta salva no histórico!')
     }
 
     setIsProposalOpen(false)
@@ -226,6 +258,20 @@ export default function Pricing() {
     // Set document title for PDF file name
     document.title = proposalMeta.fileName
 
+    setTimeout(() => {
+      window.print()
+    }, 500)
+  }
+
+  const handleReprint = (p: ProposalRecord) => {
+    if (!p.content) {
+      toast.error('O conteúdo desta proposta é de uma versão antiga e não pode ser reimpresso.')
+      return
+    }
+    setReprintData(p)
+    setPrintMode('reprint')
+    document.title = p.fileName
+    setIsProposalsHistoryOpen(false)
     setTimeout(() => {
       window.print()
     }, 500)
@@ -336,7 +382,7 @@ export default function Pricing() {
       <div
         className={cn(
           'flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500',
-          printMode === 'proposal' ? 'print:hidden' : '',
+          printMode === 'proposal' || printMode === 'reprint' ? 'print:hidden' : '',
         )}
       >
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
@@ -449,14 +495,27 @@ export default function Pricing() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleOpenProposal}
-              className="border-primary/50 text-primary hover:bg-primary/10"
-            >
-              <FileText className="h-4 w-4 mr-2" /> Gerar Proposta
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-primary/50 text-primary hover:bg-primary/10"
+                >
+                  <FileStack className="h-4 w-4 mr-2" /> Propostas
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={handleOpenProposal}>
+                  <FileText className="h-4 w-4 mr-2" /> Nova Proposta
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsProposalsHistoryOpen(true)}>
+                  <History className="h-4 w-4 mr-2" /> Histórico de Propostas
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button variant="outline" size="sm" onClick={handleExportExcel}>
               <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" /> Excel
             </Button>
@@ -475,16 +534,26 @@ export default function Pricing() {
       <div
         className={cn(
           'hidden w-full bg-white text-black min-h-screen',
-          printMode === 'proposal' ? 'print:block' : 'print:hidden',
+          printMode === 'proposal' || printMode === 'reprint' ? 'print:block' : 'print:hidden',
         )}
       >
-        <ProposalDocument
-          clientData={clientData}
-          products={products}
-          exchangeRate={exchangeRate}
-          displayCurrency={displayCurrency}
-          profile={profile}
-        />
+        {printMode === 'reprint' && reprintData?.content ? (
+          <ProposalDocument
+            clientData={reprintData.content.clientData}
+            products={reprintData.content.products}
+            exchangeRate={reprintData.content.exchangeRate}
+            displayCurrency={reprintData.content.displayCurrency}
+            profile={reprintData.content.profile}
+          />
+        ) : (
+          <ProposalDocument
+            clientData={clientData}
+            products={products}
+            exchangeRate={exchangeRate}
+            displayCurrency={displayCurrency}
+            profile={profile}
+          />
+        )}
       </div>
 
       <Dialog open={isSaveOpen} onOpenChange={setIsSaveOpen}>
@@ -543,6 +612,77 @@ export default function Pricing() {
             </Button>
             <Button onClick={handleSaveTemplate} disabled={!templateName.trim()}>
               Salvar Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isProposalsHistoryOpen} onOpenChange={setIsProposalsHistoryOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <div className="p-6 border-b shrink-0 flex items-center justify-between bg-muted/30">
+            <div>
+              <DialogTitle className="text-xl">Histórico de Propostas</DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Propostas geradas e salvas para este projeto.
+              </p>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Arquivo</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {projectProposals.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
+                      Nenhuma proposta gerada para este projeto.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  projectProposals.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-mono text-xs font-medium text-primary">
+                        {p.fileName}
+                      </TableCell>
+                      <TableCell className="text-sm">{p.clientName}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                        {new Date(p.createdAt).toLocaleString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => handleReprint(p)}>
+                            <Printer className="h-4 w-4 mr-2" />
+                            Reimprimir
+                          </Button>
+                          {canDeleteProposal(p) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                deleteProposalRecord(p.id)
+                                toast.success('Proposta excluída')
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter className="p-4 border-t bg-muted/30 shrink-0">
+            <Button variant="outline" onClick={() => setIsProposalsHistoryOpen(false)}>
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -630,7 +770,11 @@ export default function Pricing() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t">
                   <div className="space-y-2">
                     <Label>Número da Proposta (Ref)</Label>
-                    <Input value={clientData.proposalNumber} disabled className="bg-muted" />
+                    <Input
+                      value={clientData.proposalNumber}
+                      disabled
+                      className="bg-muted text-xs font-mono"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Prazo de Entrega</Label>

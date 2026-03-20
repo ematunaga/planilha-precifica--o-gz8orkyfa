@@ -111,4 +111,5 @@ export interface ProposalRecord {
   clientName: string
   createdAt: string
   createdBy?: string
+  content?: any
 }
