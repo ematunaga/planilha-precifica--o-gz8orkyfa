@@ -116,13 +116,18 @@ export default function Pricing() {
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeFolder = folders.find((f) => f.id === activeProject?.folderId)
   const activeVersion = versions.find((v) => v.id === activeVersionId)
-  const projectVersions = versions
-    .filter((v) => v.projectId === activeProjectId)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-  const projectProposals = proposals
-    .filter((p) => p.projectId === activeProjectId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  const projectVersions = useMemo(() => {
+    return versions
+      .filter((v) => v.projectId === activeProjectId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [versions, activeProjectId])
+
+  const projectProposals = useMemo(() => {
+    return proposals
+      .filter((p) => p.projectId === activeProjectId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }, [proposals, activeProjectId])
 
   const isViewer = profile?.role === 'Viewer' || profile?.role === 'Visualizador'
 
@@ -153,7 +158,10 @@ export default function Pricing() {
         }
       }
 
-      setProposalMeta((prev) => ({ ...prev, propNum, verNum }))
+      setProposalMeta((prev) => {
+        if (prev.propNum === propNum && prev.verNum === verNum) return prev
+        return { ...prev, propNum, verNum }
+      })
     }
   }, [isProposalOpen, activeProjectId, proposals, projectProposals])
 
@@ -175,11 +183,17 @@ export default function Pricing() {
     const safeCompany = (clientData.company || 'Cliente').replace(/[^a-zA-Z0-9]/g, '')
     const fileName = `Promp${X}_${safeCompany}_${dateStr}_${proposalMeta.propNum}_V${String(proposalMeta.verNum).padStart(2, '0')}`
 
-    setProposalMeta((prev) => ({ ...prev, fileName }))
-    setClientData((prev) => ({
-      ...prev,
-      proposalNumber: fileName,
-    }))
+    setProposalMeta((prev) => {
+      if (prev.fileName === fileName) return prev
+      return { ...prev, fileName }
+    })
+    setClientData((prev) => {
+      if (prev.proposalNumber === fileName) return prev
+      return {
+        ...prev,
+        proposalNumber: fileName,
+      }
+    })
   }, [clientData.company, proposalMeta.propNum, proposalMeta.verNum, products])
 
   const handleOpenProposal = () => {
