@@ -14,14 +14,16 @@ interface ProposalDocumentProps {
 }
 
 export function ProposalDocument({
-  clientData,
-  products,
-  exchangeRate,
-  displayCurrency,
+  clientData = {},
+  products = [],
+  exchangeRate = 1,
+  displayCurrency = 'BRL',
   profile,
   isPreview = false,
 }: ProposalDocumentProps) {
-  const total = products.reduce((acc, p) => {
+  const safeProducts = products || []
+
+  const total = safeProducts.reduce((acc, p) => {
     const f = calculateFinancials(p, exchangeRate)
     return acc + (displayCurrency === 'USD' ? f.totalSalePriceUsd : f.totalSalePrice)
   }, 0)
@@ -51,7 +53,7 @@ export function ProposalDocument({
           <p className="text-sm text-slate-600 mt-2">
             Nº:{' '}
             <span className="font-bold text-slate-800">
-              {clientData.proposalNumber || 'Rascunho'}
+              {clientData?.proposalNumber || 'Rascunho'}
             </span>
           </p>
           <p className="text-sm text-slate-600">
@@ -71,27 +73,27 @@ export function ProposalDocument({
         <div className="grid grid-cols-2 gap-y-3 gap-x-6 text-sm">
           <div>
             <span className="font-semibold text-slate-700 block text-xs">Empresa</span>
-            <div className="text-slate-900 mt-0.5">{clientData.company || '-'}</div>
+            <div className="text-slate-900 mt-0.5">{clientData?.company || '-'}</div>
           </div>
           <div>
             <span className="font-semibold text-slate-700 block text-xs">CNPJ</span>
-            <div className="text-slate-900 mt-0.5">{clientData.cnpj || '-'}</div>
+            <div className="text-slate-900 mt-0.5">{clientData?.cnpj || '-'}</div>
           </div>
           <div>
             <span className="font-semibold text-slate-700 block text-xs">Contato</span>
-            <div className="text-slate-900 mt-0.5">{clientData.contact || '-'}</div>
+            <div className="text-slate-900 mt-0.5">{clientData?.contact || '-'}</div>
           </div>
           <div>
             <span className="font-semibold text-slate-700 block text-xs">Telefone</span>
-            <div className="text-slate-900 mt-0.5">{clientData.phone || '-'}</div>
+            <div className="text-slate-900 mt-0.5">{clientData?.phone || '-'}</div>
           </div>
           <div className="col-span-2">
             <span className="font-semibold text-slate-700 block text-xs">Email</span>
-            <div className="text-slate-900 mt-0.5">{clientData.email || '-'}</div>
+            <div className="text-slate-900 mt-0.5">{clientData?.email || '-'}</div>
           </div>
           <div className="col-span-2">
             <span className="font-semibold text-slate-700 block text-xs">Endereço</span>
-            <div className="text-slate-900 mt-0.5">{clientData.address || '-'}</div>
+            <div className="text-slate-900 mt-0.5">{clientData?.address || '-'}</div>
           </div>
         </div>
       </div>
@@ -113,7 +115,7 @@ export function ProposalDocument({
             </tr>
           </thead>
           <tbody className="text-slate-700">
-            {products.map((p, i) => {
+            {safeProducts.map((p, i) => {
               const f = calculateFinancials(p, exchangeRate)
               const unit = displayCurrency === 'USD' ? f.unitSalePriceUsd : f.unitSalePrice
               const tot = displayCurrency === 'USD' ? f.totalSalePriceUsd : f.totalSalePrice
@@ -155,7 +157,7 @@ export function ProposalDocument({
           Condições Gerais de Fornecimento
         </h3>
         <div className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed bg-slate-50 p-4 rounded-lg border border-slate-200 print:bg-transparent print:border-none print:p-0">
-          {clientData.conditions}
+          {clientData?.conditions}
         </div>
       </div>
 
