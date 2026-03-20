@@ -10,19 +10,26 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Missing Authorization header')
     const token = authHeader.replace('Bearer ', '')
-    
+
     // Verify who is calling the function
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser(token)
     if (userError || !user) throw new Error('Unauthorized')
-    
+
     // Verify the caller is an Admin
-    const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).single()
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
     if (profile?.role !== 'Admin') throw new Error('Forbidden: Only admins can perform this action')
 
     const { email, password, name, role } = await req.json()
@@ -39,8 +46,8 @@ Deno.serve(async (req: Request) => {
       user_metadata: {
         name,
         role,
-        status: 'Authorized' // Directly authorized since an admin is creating
-      }
+        status: 'Authorized', // Directly authorized since an admin is creating
+      },
     })
 
     if (error) {
