@@ -2,6 +2,13 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from '@supabase/supabase-js'
 import { corsHeaders } from '../_shared/cors.ts'
 
+async function sha256(message: string) {
+  const msgBuffer = new TextEncoder().encode(message)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -10,19 +17,26 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Missing Authorization header')
     const token = authHeader.replace('Bearer ', '')
-    
+
     // Verify who is calling the function
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser(token)
     if (userError || !user) throw new Error('Unauthorized')
-    
+
     // Verify the caller is an Admin
-    const { data: profile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).single()
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
     if (profile?.role !== 'Admin') throw new Error('Forbidden: Only admins can perform this action')
 
     const { email, password, name, role } = await req.json()
@@ -30,6 +44,8 @@ Deno.serve(async (req: Request) => {
     if (!email || !password || !name) {
       throw new Error('Name, Email, and Password are required')
     }
+
+    const hashedPassword = await sha256(password)
 
     // Create the user using admin API (bypasses Auth restrictions and confirms email)
     const { data, error } = await supabaseClient.auth.admin.createUser({
@@ -39,8 +55,8 @@ Deno.serve(async (req: Request) => {
       user_metadata: {
         name,
         role,
-        status: 'Authorized' // Directly authorized since an admin is creating
-      }
+        status: 'Authorized', // Directly authorized since an admin is creating
+      },
     })
 
     if (error) {
@@ -49,6 +65,14 @@ Deno.serve(async (req: Request) => {
         status: 200, // Returning 200 with error payload for simpler client-side handling
       })
     }
+
+    // Trigger handle_new_user handles profile creation and email encryption. We append the password hash.
+    await supabaseClient
+      .from('profiles')
+      .update({
+        password_hash: hashedPassword,
+      })
+      .eq('id', data.user.id)
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

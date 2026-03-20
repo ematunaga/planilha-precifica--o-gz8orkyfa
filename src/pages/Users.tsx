@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { ShieldCheck, UserX, MailPlus, Send, Trash2, Loader2, UserPlus } from 'lucide-react'
+import {
+  ShieldCheck,
+  UserX,
+  MailPlus,
+  Send,
+  Trash2,
+  Loader2,
+  UserPlus,
+  Key,
+  Copy,
+} from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import {
   fetchUsers,
@@ -12,6 +22,7 @@ import {
   directCreateUser,
   directDeleteUser,
 } from '@/services/users'
+import { fetchApiKeys, createApiKey, deleteApiKey } from '@/services/api_keys'
 import {
   Table,
   TableBody,
@@ -55,6 +66,7 @@ export default function Users() {
   const { toast } = useToast()
   const [users, setUsers] = useState<any[]>([])
   const [invitations, setInvitations] = useState<any[]>([])
+  const [apiKeys, setApiKeys] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   const [isInviteOpen, setIsInviteOpen] = useState(false)
@@ -78,11 +90,20 @@ export default function Users() {
   const [userToDeleteId, setUserToDeleteId] = useState<string | null>(null)
   const [deletingUser, setDeletingUser] = useState(false)
 
+  const [isCreateApiKeyOpen, setIsCreateApiKeyOpen] = useState(false)
+  const [newApiKeyName, setNewApiKeyName] = useState('')
+  const [creatingApiKey, setCreatingApiKey] = useState(false)
+
   const loadData = async () => {
     try {
-      const [u, i] = await Promise.all([fetchUsers(), fetchInvitations()])
+      const [u, i, k] = await Promise.all([
+        fetchUsers(),
+        fetchInvitations(),
+        fetchApiKeys().catch(() => []), // Fallback in case table is still migrating
+      ])
       setUsers(u)
       setInvitations(i)
+      setApiKeys(k)
     } catch (e) {
       toast({ title: 'Erro', description: 'Erro ao carregar dados.', variant: 'destructive' })
     } finally {
@@ -211,12 +232,42 @@ export default function Users() {
     }
   }
 
+  const handleCreateApiKey = async () => {
+    if (!newApiKeyName) return
+    setCreatingApiKey(true)
+    try {
+      await createApiKey(newApiKeyName)
+      toast({ title: 'Sucesso', description: 'Chave de API gerada com sucesso.' })
+      setIsCreateApiKeyOpen(false)
+      setNewApiKeyName('')
+      loadData()
+    } catch (e: any) {
+      toast({
+        title: 'Erro',
+        description: e.message || 'Erro ao gerar chave.',
+        variant: 'destructive',
+      })
+    } finally {
+      setCreatingApiKey(false)
+    }
+  }
+
+  const handleDeleteApiKey = async (id: string) => {
+    try {
+      await deleteApiKey(id)
+      toast({ title: 'Sucesso', description: 'Chave excluída com sucesso.' })
+      loadData()
+    } catch (e) {
+      toast({ title: 'Erro', description: 'Erro ao excluir chave.', variant: 'destructive' })
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 h-full w-full">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Gestão de Usuários</h2>
         <p className="text-muted-foreground">
-          Gerencie acessos, autorizações e convites do sistema.
+          Gerencie acessos, autorizações e integrações do sistema.
         </p>
       </div>
 
@@ -225,6 +276,7 @@ export default function Users() {
           <TabsList>
             <TabsTrigger value="users">Usuários Registrados</TabsTrigger>
             <TabsTrigger value="invitations">Convites Enviados</TabsTrigger>
+            <TabsTrigger value="api">Integração API</TabsTrigger>
           </TabsList>
           <div className="flex gap-2 w-full sm:w-auto overflow-x-auto">
             <Button
@@ -427,7 +479,180 @@ export default function Users() {
             </Table>
           </div>
         </TabsContent>
+
+        <TabsContent value="api">
+          <div className="flex flex-col gap-6">
+            <div className="flex justify-between items-center bg-muted/30 p-4 rounded-lg border">
+              <div>
+                <h3 className="font-semibold flex items-center">
+                  <Key className="w-4 h-4 mr-2" /> Chaves de Integração API
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Gerencie as chaves de acesso para integração com outros sistemas (ERP, CRM) via
+                  API.
+                </p>
+              </div>
+              <Button onClick={() => setIsCreateApiKeyOpen(true)}>Gerar Nova Chave</Button>
+            </div>
+
+            <div className="border rounded-md bg-card shadow-sm">
+              <Table>
+                <TableHeader className="bg-muted/50">
+                  <TableRow>
+                    <TableHead>Nome da Integração</TableHead>
+                    <TableHead>Token (Bearer)</TableHead>
+                    <TableHead>Criado em</TableHead>
+                    <TableHead>Último Uso</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {apiKeys.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                        Nenhuma chave de API gerada.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    apiKeys.map((key) => (
+                      <TableRow key={key.id}>
+                        <TableCell className="font-medium">{key.name}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <code className="bg-muted px-2 py-1 rounded text-xs">
+                              {key.token.substring(0, 15)}...
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 ml-2"
+                              onClick={() => {
+                                navigator.clipboard.writeText(key.token)
+                                toast({
+                                  title: 'Copiado',
+                                  description: 'Token copiado para a área de transferência.',
+                                })
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(key.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {key.last_used_at ? new Date(key.last_used_at).toLocaleString() : 'Nunca'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-destructive border-destructive/30 hover:bg-destructive/10"
+                            onClick={() => handleDeleteApiKey(key.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="bg-slate-900 text-slate-50 p-6 rounded-lg shadow-inner">
+              <h3 className="font-semibold text-lg mb-4">Documentação da API</h3>
+              <div className="space-y-4 text-sm font-mono text-slate-300">
+                <p className="text-slate-400">// Base URL</p>
+                <p>{import.meta.env.VITE_SUPABASE_URL}/functions/v1/api</p>
+
+                <p className="text-slate-400 mt-4">// Autenticação</p>
+                <p>
+                  Adicione o header:{' '}
+                  <span className="text-emerald-400">Authorization: Bearer SEU_TOKEN</span>
+                </p>
+
+                <p className="text-slate-400 mt-4">// Endpoints Disponíveis</p>
+                <p>
+                  <span className="text-blue-400">GET</span> /products{' '}
+                  <span className="text-slate-500">- Retorna catálogo de produtos</span>
+                </p>
+                <p>
+                  <span className="text-blue-400">GET</span> /pricing-sheets{' '}
+                  <span className="text-slate-500">- Retorna projetos e itens precificados</span>
+                </p>
+                <p>
+                  <span className="text-blue-400">GET</span> /proposals{' '}
+                  <span className="text-slate-500">- Retorna propostas geradas</span>
+                </p>
+                <p>
+                  <span className="text-blue-400">GET</span> /users{' '}
+                  <span className="text-slate-500">
+                    - Retorna usuários (com e-mails criptografados)
+                  </span>
+                </p>
+
+                <p className="text-slate-400 mt-4">
+                  // Sincronismo de Usuários (com criptografia requerida na base)
+                </p>
+                <p>
+                  <span className="text-yellow-400">POST</span> /users/sync
+                </p>
+                <pre className="bg-slate-950 p-3 rounded text-xs mt-2 overflow-x-auto text-slate-300">
+                  {`{
+  "users": [
+    {
+      "email": "novo@usuario.com",
+      "name": "Nome do Usuário",
+      "role": "Visualizador",
+      "password": "senha_segura_123!"
+    }
+  ]
+}`}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
+
+      <Dialog open={isCreateApiKeyOpen} onOpenChange={setIsCreateApiKeyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gerar Chave de API</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nome da Integração / Sistema</Label>
+              <Input
+                value={newApiKeyName}
+                onChange={(e) => setNewApiKeyName(e.target.value)}
+                placeholder="Ex: ERP Protheus, CRM Hubspot"
+                disabled={creatingApiKey}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateApiKeyOpen(false)}
+              disabled={creatingApiKey}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateApiKey} disabled={!newApiKeyName || creatingApiKey}>
+              {creatingApiKey ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...
+                </>
+              ) : (
+                'Gerar Chave'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
         <DialogContent>
