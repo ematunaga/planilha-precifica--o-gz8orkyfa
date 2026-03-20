@@ -1,8 +1,9 @@
 {
   "_versions": {
     "send-invite": 2,
-    "create-user-admin": 1,
+    "create-user-admin": 2,
     "delete-user-admin": 1,
-    "functions": 1
+    "functions": 1,
+    "api": 1
   }
 }
